@@ -179,6 +179,14 @@ em.italic-brand,
   color: var(--brand-on-dark);
 }
 
+/* 테마 인지 브랜드 텍스트 색 (AA 보정: light #C81E14 / dark #FF6B5E) */
+.text-brand-accent {
+  color: var(--brand-on-light);
+}
+[data-theme="dark"] .text-brand-accent {
+  color: var(--brand-on-dark);
+}
+
 /* 선택 영역 — 브랜드 (흰 글자 보장) */
 ::selection {
   background: var(--brand);
