@@ -1,64 +1,69 @@
 @import "tailwindcss";
 @import "@rainbow-me/rainbowkit/styles.css";
 
-/* ───────────── Fonts (self-contained, no npm dep) ─────────────
- * 음악/엔터 페어링: Righteous(display) + Poppins(body) + Chakra Petch(data/숫자).
- * CJK: Pretendard(KO 기본) + Noto Sans JP(JA). Righteous는 라틴 전용 → CJK 타이틀은 Pretendard/Noto.
- * ⚠️ 결정 #7(CJK 디스플레이 폰트 게이트)은 미확정 — Pretendard ExtraBold를 기본 폴백으로 둠.
+/* ───────────── Fonts ─────────────
+ * Hallyu Pulse(Techno-Performance): Space Grotesk(display/labels/data) + Plus Jakarta Sans(body).
+ * CJK: Pretendard(KO) + Noto Sans JP(JA) — 라틴 디스플레이는 Space Grotesk, CJK는 Pretendard/Noto.
  */
-@import url("https://fonts.googleapis.com/css2?family=Righteous&family=Poppins:wght@300;400;500;600;700&family=Chakra+Petch:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;700;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;700;900&display=swap");
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css");
 
 /* ───────────── Design tokens ─────────────
- * ccm 패턴 계승: [data-theme] 변수 스왑 + @theme에서 --color-* 참조.
- * 결정 #13 (moss audit): ccm 단일 accent(moss)를 의미별로 분기 — data/positive에 brand red 금지.
- * 결정 #4 (테마): site 기본 다크 + 라이트 토글. 라이트 paper=순백(ASSA 레드+화이트 BI; ccm 웜크림 대체).
- * 결정 #15 (브랜드): Red #EF2525 primary + 다크 캔버스 + 골드 액센트(텍스트 금지).
- * WCAG: 흰 글자 on #EF2525 = 4.23:1 FAIL → Primary 면/텍스트는 --brand-pressed/--brand-on-* 사용.
+ * [data-theme] 변수 스왑 + @theme에서 --color-* 참조.
+ * moss audit #13: data/positive에 brand red 금지. 브랜드=Red #EF2525 + 다크 캔버스.
+ * WCAG: 흰 글자 on #EF2525 = 4.23 FAIL → Primary 면은 --brand-pressed, 레드 텍스트는 --brand-on-*.
  */
 :root,
 [data-theme="light"] {
-  /* surface / text (ccm 명명 계승) */
   --paper: #ffffff;
   --paper-deep: #f5f5f7;
+  --surface-2: #eeeef2;
+  --surface-3: #e8e8ee;
   --ink: #0f172a;
   --ink-soft: #475569;
+  --ink-dim: #6b748a;
   --rule: #e3e3ea;
-  --nav-bg: rgba(255, 255, 255, 0.9);
+  --rule-strong: #d2d2dc;
+  --nav-bg: rgba(255, 255, 255, 0.82);
 
-  /* BRAND (레드) — 분기된 accent */
-  --brand: #ef2525;          /* 면(채움)·모티프. 텍스트로 직접 쓰지 말 것(AA fail) */
+  --brand: #ef2525;
   --brand-hover: #d93a26;
-  --brand-pressed: #c81e14;  /* Primary CTA 배경: 흰 글자 AA 통과 */
-  --brand-on-light: #c81e14; /* 흰 배경 위 레드 텍스트/링크/포커스(AA) */
-  --coral: #d9531f;          /* 보조 브랜드(심볼 코랄)·warning 근접 */
+  --brand-pressed: #c81e14;
+  --brand-on-light: #c81e14;
+  --brand-on-dark: #c81e14;
+  --red-deep: #b8141a;
+  --coral: #d9531f;
 
-  /* 의미 상태 — brand와 분리 */
-  --positive: #1f9d57;       /* 성공/완료/balanced */
-  --warning: #b45309;        /* 경고 (amber-700, AA) */
-  --destructive: #dc2626;    /* 파괴/에러 — brand red와 의미 구분(아이콘+카피 병행) */
-  --gold: #b8860b;           /* 투자자/티어 액센트 — 면·보더만(텍스트 금지) */
+  --positive: #1f9d57;
+  --warning: #b45309;
+  --destructive: #dc2626;
+  --gold: #b8860b;
 
-  /* DATA 시각화 — 중립 다색(레드 아님). 차트 stroke/fill 전용 */
-  --data-1: #2f7d8c; /* teal  */
-  --data-2: #c4702a; /* amber (구 clay 역할) */
-  --data-3: #5b54b8; /* indigo */
-  --data-4: #2f8f5b; /* green */
-  --data-5: #8a6d3b; /* sand */
+  /* DATA 시각화 — brand red 미포함 */
+  --data-1: #2f7d8c;
+  --data-2: #c4702a;
+  --data-3: #5b54b8;
+  --data-4: #2f8f5b;
+  --data-5: #8a6d3b;
 }
 
 [data-theme="dark"] {
-  --paper: #0b0b14;          /* 잉크 네이비블랙 캔버스(덱 네이비 계승) */
+  --paper: #0b0b14;
   --paper-deep: #14141f;
+  --surface-2: #1b1b24;
+  --surface-3: #1f1f2e;
   --ink: #f8fafc;
   --ink-soft: #94a3b8;
-  --rule: #1e1e2a;
-  --nav-bg: rgba(11, 11, 20, 0.92);
+  --ink-dim: #6b748a;
+  --rule: rgba(255, 255, 255, 0.09);
+  --rule-strong: rgba(255, 255, 255, 0.16);
+  --nav-bg: rgba(11, 11, 20, 0.72);
 
   --brand: #ef2525;
   --brand-hover: #ff3b3b;
   --brand-pressed: #c81e14;
-  --brand-on-dark: #ff6b5e;  /* 다크 위 레드 텍스트/링크/포커스(AA) */
+  --brand-on-dark: #ff6b5e;
+  --red-deep: #b8141a;
   --coral: #ff7a5e;
 
   --positive: #34d399;
@@ -66,19 +71,24 @@
   --destructive: #f87171;
   --gold: #f59e0b;
 
-  --data-1: #4cc4d6;
-  --data-2: #e0863a;
-  --data-3: #8b80f0;
-  --data-4: #4fb477;
-  --data-5: #c9a24b;
+  /* 비비드 data 팔레트 (Hallyu Pulse) */
+  --data-1: #14e2e2; /* teal */
+  --data-2: #ffba20; /* amber */
+  --data-3: #8b80f0; /* indigo */
+  --data-4: #4fb477; /* green */
+  --data-5: #c9a24b; /* sand */
 }
 
 @theme {
   --color-paper: var(--paper);
   --color-paper-deep: var(--paper-deep);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
+  --color-ink-dim: var(--ink-dim);
   --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
 
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);
@@ -96,11 +106,11 @@
   --color-data-4: var(--data-4);
   --color-data-5: var(--data-5);
 
-  /* 음악/엔터 페어링 — Righteous(display) + Poppins(body) + Chakra Petch(data) + Pretendard(KO) */
-  --font-display: "Righteous", "Pretendard Variable", system-ui, sans-serif;
-  --font-body: "Poppins", "Pretendard Variable", system-ui, sans-serif;
-  --font-ui: "Poppins", "Pretendard Variable", system-ui, sans-serif;
-  --font-data: "Chakra Petch", ui-monospace, monospace;
+  /* Space Grotesk(display/labels/data) + Plus Jakarta Sans(body) */
+  --font-display: "Space Grotesk", "Pretendard Variable", system-ui, sans-serif;
+  --font-body: "Plus Jakarta Sans", "Pretendard Variable", system-ui, sans-serif;
+  --font-ui: "Plus Jakarta Sans", "Pretendard Variable", system-ui, sans-serif;
+  --font-data: "Space Grotesk", ui-monospace, sans-serif;
 
   --radius-none: 0;
 }
@@ -114,7 +124,6 @@ body,
 
 html,
 body {
-  /* clip prevents horizontal overflow without breaking position:sticky (SiteNav/AnchorNav) */
   overflow-x: clip;
 }
 
@@ -137,9 +146,11 @@ h2,
 h3 {
   text-wrap: balance;
   font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
-/* CJK 폴백 — Righteous는 라틴 전용. KO/JA 디스플레이는 Pretendard/Noto Bold (결정 #7 게이트 별도) */
+/* CJK 폴백 — Space Grotesk는 라틴 전용. KO/JA 디스플레이는 Pretendard/Noto */
 :lang(ko) h1, :lang(ko) h2, :lang(ko) h3 {
   font-family: "Pretendard Variable", system-ui, sans-serif;
   font-weight: 800;
@@ -149,13 +160,13 @@ h3 {
   font-weight: 900;
 }
 
-/* 숫자 정렬 (세일·대시보드 수치) */
+/* 숫자 정렬 */
 .tnum {
   font-variant-numeric: tabular-nums;
   font-family: var(--font-data);
 }
 
-/* ───────────── BRAND 강조 (ccm .italic-moss 계승 → 의미=브랜드) ───────────── */
+/* ───────────── BRAND 강조 ───────────── */
 em.italic-brand,
 .italic-brand {
   font-style: normal;
@@ -165,21 +176,22 @@ em.italic-brand,
 [data-theme="dark"] em.italic-brand,
 [data-theme="dark"] .italic-brand {
   color: var(--brand-on-dark);
+  text-shadow: 0 0 34px rgba(239, 37, 37, 0.4);
 }
 
-/* SectionLabel eyebrow (구 `font-mono uppercase text-moss` 패턴 → 브랜드) */
+/* SectionLabel eyebrow */
 .eyebrow {
   font-family: var(--font-data);
   text-transform: uppercase;
   letter-spacing: 0.16em;
   font-size: 11px;
+  font-weight: 600;
   color: var(--brand-on-light);
 }
 [data-theme="dark"] .eyebrow {
   color: var(--brand-on-dark);
 }
 
-/* 테마 인지 브랜드 텍스트 색 (AA 보정: light #C81E14 / dark #FF6B5E) */
 .text-brand-accent {
   color: var(--brand-on-light);
 }
@@ -187,13 +199,11 @@ em.italic-brand,
   color: var(--brand-on-dark);
 }
 
-/* 선택 영역 — 브랜드 (흰 글자 보장) */
 ::selection {
   background: var(--brand);
   color: #ffffff;
 }
 
-/* 각진 reset (ASSA 각진 BI 정합) */
 button,
 input,
 select,
@@ -201,38 +211,143 @@ textarea {
   border-radius: 0;
 }
 
-/* Primary CTA — 흰 글자 on --brand-pressed (WCAG AA; #EF2525=4.23 FAIL → #C81E14 통과) */
+/* ───────────── Techno-Performance 시각 시스템 (Hallyu Pulse) ───────────── */
+
+/* chamfer — 각진 클립 코너(상우/하좌 챔퍼) */
+.chamfer { clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+.chamfer-sm { clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px)); }
+.chamfer-lg { clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px)); }
+
+/* rim lighting — 그림자 대신 1px 내부 보더 */
+.rim { box-shadow: inset 0 0 0 1px var(--rule); }
+.rim-strong { box-shadow: inset 0 0 0 1px var(--rule-strong); }
+
+/* radial glows — 절대배치 분위기 레이어 (red/teal/indigo) */
+.glow { position: absolute; pointer-events: none; z-index: 0; filter: blur(8px); }
+.glow-red { background: radial-gradient(circle at center, rgba(239, 37, 37, 0.28), rgba(239, 37, 37, 0.06) 40%, transparent 66%); }
+.glow-teal { background: radial-gradient(circle at center, rgba(20, 226, 226, 0.18), transparent 68%); }
+.glow-indigo { background: radial-gradient(circle at center, rgba(139, 128, 240, 0.15), transparent 64%); }
+
+/* faint background grid (마스크드) */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 80% at 50% 30%, #000 30%, transparent 78%);
+  mask-image: radial-gradient(ellipse 70% 80% at 50% 30%, #000 30%, transparent 78%);
+}
+[data-theme="light"] .bg-grid {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
+}
+
+/* status chip */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-data);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 7px 13px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+.chip .sw { width: 8px; height: 8px; flex: none; }
+
+/* nav link — red underline on hover */
+.nav-link {
+  position: relative;
+  font-family: var(--font-data);
+  font-size: 14px;
+  color: var(--ink-soft);
+  transition: color 0.2s ease;
+}
+.nav-link:hover { color: var(--ink); }
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  height: 1px;
+  width: 0;
+  background: var(--brand);
+  box-shadow: 0 0 8px rgba(239, 37, 37, 0.8);
+  transition: width 0.25s ease;
+}
+.nav-link:hover::after { width: 100%; }
+
+/* notice bar scan line */
+.notice-scan {
+  position: absolute;
+  inset: 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  animation: assa-scan 6s linear infinite;
+  pointer-events: none;
+}
+
+/* Primary CTA — 흰 글자 on --brand-pressed(AA) + chamfer + red glow + ▶ 지원 */
 .btn-primary {
   background: var(--brand-pressed);
   color: #ffffff;
   min-height: 44px;
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+  box-shadow: 0 6px 26px -10px rgba(239, 37, 37, 0.65);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 .btn-primary:hover {
   background: var(--brand-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 34px -10px rgba(239, 37, 37, 0.8);
 }
 
-/* 최소 터치 타깃 (44×44) */
-.hit-44 {
-  min-width: 44px;
+/* Ghost CTA — chamfer + rim */
+.btn-ghost {
   min-height: 44px;
+  color: var(--ink);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+  transition: box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+.btn-ghost:hover {
+  box-shadow: inset 0 0 0 1px var(--brand);
+  color: var(--brand-on-dark);
+  background: color-mix(in srgb, var(--brand) 8%, transparent);
+}
+[data-theme="light"] .btn-ghost:hover { color: var(--brand-on-light); }
+
+/* ▶ play triangle (CTA) */
+.tri {
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 6px 0 6px 10px;
+  border-color: transparent transparent transparent currentColor;
 }
 
-/* LIVE 상태 펄스 — JS에서 useReducedMotion 가드 + 아래 @media 리셋 이중 안전 */
-@keyframes assa-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
+/* 최소 터치 타깃 */
+.hit-44 { min-width: 44px; min-height: 44px; }
 
-/* ⚠️ 신규: focus-visible — ccm 부재. 키보드 접근성(디자인 원칙 #4/접근성) */
+/* equalizer 바 + LIVE 펄스 + 스캔 라인 (모두 useReducedMotion 가드 또는 아래 @media 리셋) */
+@keyframes assa-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes assa-eq { 0% { transform: scaleY(0.28); } 50% { transform: scaleY(1); } 100% { transform: scaleY(0.42); } }
+@keyframes assa-scan { 0% { transform: translateX(-120%); } 100% { transform: translateX(440%); } }
+.eqbar { transform-origin: bottom; animation: assa-eq 1.5s ease-in-out infinite alternate; }
+
+/* focus-visible */
 :focus-visible {
   outline: 2px solid var(--brand-on-light);
   outline-offset: 2px;
 }
-[data-theme="dark"] :focus-visible {
-  outline-color: var(--brand-on-dark);
-}
+[data-theme="dark"] :focus-visible { outline-color: var(--brand-on-dark); }
 
-/* ⚠️ 신규: reduced-motion (CSS 리셋). JS 애니메이션은 useReducedMotion() 훅 병행 필수 */
+/* reduced-motion CSS 리셋 (JS 훅 병행) */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -243,8 +358,3 @@ textarea {
     scroll-behavior: auto !important;
   }
 }
-
-/*
- * NOTE: ccm index.css의 Earth 섹션별 모바일 그리드 오버라이드(#grades/#roadmap/#arch 등)는
- * 해당 섹션을 fork(Earth→Home)할 때 함께 이식한다. 본 파일은 토큰 파운데이션 + a11y 기본만 둔다.
- */

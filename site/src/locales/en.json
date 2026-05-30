@@ -1,7 +1,11 @@
 {
   "common": {
     "appName": "ASSA WAVE",
-    "official": "Official domain: assawave.io — beware of other sites"
+    "official": "Official domain: assawave.io — beware of other sites",
+    "phishing": {
+      "title": "Stay safe",
+      "body": "The only official domain is assawave.io. Any token sale, airdrop, or message claiming to be ASSA WAVE on other domains (.ai / .net), social media, or DMs is a scam. The official contract address will be published here and in the whitepaper at mainnet launch."
+    }
   },
   "nav": {
     "tokenomics": "Tokenomics",
@@ -24,7 +28,7 @@
       "roadmap": "Roadmap"
     },
     "hero": {
-      "eyebrow": "K-POP · WEB3 · WAVE",
+      "eyebrow": "Web3 fan economy · Built on Base",
       "h1Pre": "The new wave of K-pop fandom,",
       "h1Em": "owned by fans.",
       "lead": "Streaming turned passion into billions — yet fans never owned a share. ASSA WAVE puts that value on-chain: what fans spend creates value, and that value flows back to fans.",
@@ -32,12 +36,22 @@
       "ctaApp": "Open App",
       "ctaPaper": "Read Whitepaper",
       "factsLabel": "At a glance",
+      "factsBadge": "Informational",
       "facts": [
         ["Token", "$ASSA"],
         ["Max supply", "10B"],
         ["Network", "Base"],
         ["Standard", "ERC-20"]
-      ]
+      ],
+      "chips": [
+        ["Streaming → Value", "data-1"],
+        ["Fan rewards", "data-2"],
+        ["On-chain proof", "data-3"],
+        ["Fan-owned", "data-4"]
+      ],
+      "vizLabel": "Hallyu Pulse · Live",
+      "vizFoot": "Fan activity → value signal",
+      "vizChannels": "22 channels"
     },
     "problem": {
       "label": "Manifesto",

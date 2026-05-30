@@ -66,7 +66,7 @@ const DARK: Tokens = {
   warning: "#fbbf24",
   destructive: "#f87171",
   gold: "#f59e0b",
-  data: ["#4cc4d6", "#e0863a", "#8b80f0", "#4fb477", "#c9a24b"],
+  data: ["#14e2e2", "#ffba20", "#8b80f0", "#4fb477", "#c9a24b"],
 };
 
 const TOKENS: Record<Theme, Tokens> = { light: LIGHT, dark: DARK };

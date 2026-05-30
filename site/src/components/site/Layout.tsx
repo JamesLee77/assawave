@@ -21,12 +21,17 @@ export default function Layout() {
   const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-paper text-ink flex flex-col">
-      {/* 공식 도메인 고지 (반피싱) */}
+      {/* 공식 도메인 고지 (반피싱) — 그래디언트 + 펄스 닷 + 스캔 라인 */}
       <div
         role="note"
-        className="w-full text-center text-[12px] py-1.5 bg-paper-deep text-ink-soft border-b border-rule"
+        className="relative overflow-hidden border-b border-rule"
+        style={{ background: "linear-gradient(90deg, rgba(239,37,37,0.12), rgba(239,37,37,0.04) 60%, transparent)" }}
       >
-        {t("common:official")}
+        <span className="notice-scan" aria-hidden="true" />
+        <div className="relative mx-auto max-w-7xl px-5 md:px-10 h-[38px] flex items-center gap-3 font-data text-[12px] uppercase tracking-[0.14em] text-ink-soft">
+          <span aria-hidden="true" className="h-1.5 w-1.5" style={{ background: "var(--brand)", boxShadow: "0 0 10px 1px rgba(239,37,37,0.9)", animation: "assa-pulse 2.4s ease-in-out infinite" }} />
+          <span>{t("common:official")}</span>
+        </div>
       </div>
 
       <header className="sticky top-0 z-30 backdrop-blur border-b border-rule" style={{ background: "var(--nav-bg)" }}>
@@ -36,7 +41,7 @@ export default function Layout() {
           </Link>
           <nav className="hidden md:flex items-center gap-7" aria-label="Primary">
             {NAV.map((n) => (
-              <a key={n.id} href={`/#${n.id}`} className="eyebrow hover:text-ink transition-colors">
+              <a key={n.id} href={`/#${n.id}`} className="nav-link">
                 {t(`nav:${n.key}`)}
               </a>
             ))}
