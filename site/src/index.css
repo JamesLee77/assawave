@@ -1,0 +1,236 @@
+@import "tailwindcss";
+@import "@rainbow-me/rainbowkit/styles.css";
+
+/* ───────────── Fonts (self-contained, no npm dep) ─────────────
+ * 음악/엔터 페어링: Righteous(display) + Poppins(body) + Chakra Petch(data/숫자).
+ * CJK: Pretendard(KO 기본) + Noto Sans JP(JA). Righteous는 라틴 전용 → CJK 타이틀은 Pretendard/Noto.
+ * ⚠️ 결정 #7(CJK 디스플레이 폰트 게이트)은 미확정 — Pretendard ExtraBold를 기본 폴백으로 둠.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Righteous&family=Poppins:wght@300;400;500;600;700&family=Chakra+Petch:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;700;900&display=swap");
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css");
+
+/* ───────────── Design tokens ─────────────
+ * ccm 패턴 계승: [data-theme] 변수 스왑 + @theme에서 --color-* 참조.
+ * 결정 #13 (moss audit): ccm 단일 accent(moss)를 의미별로 분기 — data/positive에 brand red 금지.
+ * 결정 #4 (테마): site 기본 다크 + 라이트 토글. 라이트 paper=순백(ASSA 레드+화이트 BI; ccm 웜크림 대체).
+ * 결정 #15 (브랜드): Red #EF2525 primary + 다크 캔버스 + 골드 액센트(텍스트 금지).
+ * WCAG: 흰 글자 on #EF2525 = 4.23:1 FAIL → Primary 면/텍스트는 --brand-pressed/--brand-on-* 사용.
+ */
+:root,
+[data-theme="light"] {
+  /* surface / text (ccm 명명 계승) */
+  --paper: #ffffff;
+  --paper-deep: #f5f5f7;
+  --ink: #0f172a;
+  --ink-soft: #475569;
+  --rule: #e3e3ea;
+  --nav-bg: rgba(255, 255, 255, 0.9);
+
+  /* BRAND (레드) — 분기된 accent */
+  --brand: #ef2525;          /* 면(채움)·모티프. 텍스트로 직접 쓰지 말 것(AA fail) */
+  --brand-hover: #d93a26;
+  --brand-pressed: #c81e14;  /* Primary CTA 배경: 흰 글자 AA 통과 */
+  --brand-on-light: #c81e14; /* 흰 배경 위 레드 텍스트/링크/포커스(AA) */
+  --coral: #d9531f;          /* 보조 브랜드(심볼 코랄)·warning 근접 */
+
+  /* 의미 상태 — brand와 분리 */
+  --positive: #1f9d57;       /* 성공/완료/balanced */
+  --warning: #b45309;        /* 경고 (amber-700, AA) */
+  --destructive: #dc2626;    /* 파괴/에러 — brand red와 의미 구분(아이콘+카피 병행) */
+  --gold: #b8860b;           /* 투자자/티어 액센트 — 면·보더만(텍스트 금지) */
+
+  /* DATA 시각화 — 중립 다색(레드 아님). 차트 stroke/fill 전용 */
+  --data-1: #2f7d8c; /* teal  */
+  --data-2: #c4702a; /* amber (구 clay 역할) */
+  --data-3: #5b54b8; /* indigo */
+  --data-4: #2f8f5b; /* green */
+  --data-5: #8a6d3b; /* sand */
+}
+
+[data-theme="dark"] {
+  --paper: #0b0b14;          /* 잉크 네이비블랙 캔버스(덱 네이비 계승) */
+  --paper-deep: #14141f;
+  --ink: #f8fafc;
+  --ink-soft: #94a3b8;
+  --rule: #1e1e2a;
+  --nav-bg: rgba(11, 11, 20, 0.92);
+
+  --brand: #ef2525;
+  --brand-hover: #ff3b3b;
+  --brand-pressed: #c81e14;
+  --brand-on-dark: #ff6b5e;  /* 다크 위 레드 텍스트/링크/포커스(AA) */
+  --coral: #ff7a5e;
+
+  --positive: #34d399;
+  --warning: #fbbf24;
+  --destructive: #f87171;
+  --gold: #f59e0b;
+
+  --data-1: #4cc4d6;
+  --data-2: #e0863a;
+  --data-3: #8b80f0;
+  --data-4: #4fb477;
+  --data-5: #c9a24b;
+}
+
+@theme {
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-rule: var(--rule);
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-pressed: var(--brand-pressed);
+  --color-coral: var(--coral);
+
+  --color-positive: var(--positive);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+  --color-gold: var(--gold);
+
+  --color-data-1: var(--data-1);
+  --color-data-2: var(--data-2);
+  --color-data-3: var(--data-3);
+  --color-data-4: var(--data-4);
+  --color-data-5: var(--data-5);
+
+  /* 음악/엔터 페어링 — Righteous(display) + Poppins(body) + Chakra Petch(data) + Pretendard(KO) */
+  --font-display: "Righteous", "Pretendard Variable", system-ui, sans-serif;
+  --font-body: "Poppins", "Pretendard Variable", system-ui, sans-serif;
+  --font-ui: "Poppins", "Pretendard Variable", system-ui, sans-serif;
+  --font-data: "Chakra Petch", ui-monospace, monospace;
+
+  --radius-none: 0;
+}
+
+/* ───────────── Base ───────────── */
+html,
+body,
+#root {
+  min-height: 100vh;
+}
+
+html,
+body {
+  /* clip prevents horizontal overflow without breaking position:sticky (SiteNav/AnchorNav) */
+  overflow-x: clip;
+}
+
+html {
+  background: var(--paper);
+  color: var(--ink);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  font-family: var(--font-body);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+  font-family: var(--font-display);
+}
+
+/* CJK 폴백 — Righteous는 라틴 전용. KO/JA 디스플레이는 Pretendard/Noto Bold (결정 #7 게이트 별도) */
+:lang(ko) h1, :lang(ko) h2, :lang(ko) h3 {
+  font-family: "Pretendard Variable", system-ui, sans-serif;
+  font-weight: 800;
+}
+:lang(ja) h1, :lang(ja) h2, :lang(ja) h3 {
+  font-family: "Noto Sans JP", system-ui, sans-serif;
+  font-weight: 900;
+}
+
+/* 숫자 정렬 (세일·대시보드 수치) */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-data);
+}
+
+/* ───────────── BRAND 강조 (ccm .italic-moss 계승 → 의미=브랜드) ───────────── */
+em.italic-brand,
+.italic-brand {
+  font-style: normal;
+  color: var(--brand-on-light);
+  font-weight: 600;
+}
+[data-theme="dark"] em.italic-brand,
+[data-theme="dark"] .italic-brand {
+  color: var(--brand-on-dark);
+}
+
+/* SectionLabel eyebrow (구 `font-mono uppercase text-moss` 패턴 → 브랜드) */
+.eyebrow {
+  font-family: var(--font-data);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 11px;
+  color: var(--brand-on-light);
+}
+[data-theme="dark"] .eyebrow {
+  color: var(--brand-on-dark);
+}
+
+/* 선택 영역 — 브랜드 (흰 글자 보장) */
+::selection {
+  background: var(--brand);
+  color: #ffffff;
+}
+
+/* 각진 reset (ASSA 각진 BI 정합) */
+button,
+input,
+select,
+textarea {
+  border-radius: 0;
+}
+
+/* Primary CTA — 흰 글자 on --brand-pressed (WCAG AA; #EF2525=4.23 FAIL → #C81E14 통과) */
+.btn-primary {
+  background: var(--brand-pressed);
+  color: #ffffff;
+  min-height: 44px;
+}
+.btn-primary:hover {
+  background: var(--brand-hover);
+}
+
+/* 최소 터치 타깃 (44×44) */
+.hit-44 {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* ⚠️ 신규: focus-visible — ccm 부재. 키보드 접근성(디자인 원칙 #4/접근성) */
+:focus-visible {
+  outline: 2px solid var(--brand-on-light);
+  outline-offset: 2px;
+}
+[data-theme="dark"] :focus-visible {
+  outline-color: var(--brand-on-dark);
+}
+
+/* ⚠️ 신규: reduced-motion (CSS 리셋). JS 애니메이션은 useReducedMotion() 훅 병행 필수 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * NOTE: ccm index.css의 Earth 섹션별 모바일 그리드 오버라이드(#grades/#roadmap/#arch 등)는
+ * 해당 섹션을 fork(Earth→Home)할 때 함께 이식한다. 본 파일은 토큰 파운데이션 + a11y 기본만 둔다.
+ */
