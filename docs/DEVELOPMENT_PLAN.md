@@ -313,8 +313,8 @@ ASSAGovernor+Timelock(votes 소스 단일화 결정 §8-16 반영), PredictionMa
 
 1. **스택 override** — [승인] Foundry/Next14/NestJS/Ponder 폐기, ccm 실제 스택 확정.
 2. **인덱서** — [Worker view 폴링 + **신규 eventIndexer**] 별도 Ponder/Graph 불필요(Phase1). ⚠️ 이벤트 로그 인덱싱은 ccm에 없어 신규 구축.
-3. **세일 게이팅** — [**per-round whitelist 유지 권고**(컨트랙트 무변경=진짜 재사용·감사표면 0), KYCRegistry는 프런트/백엔드 게이팅+온체인 진실원천으로 병용] vs purchase에 isKYCed 주입(신규 변경·감사표면↑). ⚠️ KYCRegistry 주입 채택 시 mainnet 배포가 Sale 배포 선행.
-4. **세일 베스팅 모델** — [**CCMTGESale self-contained 유지 권고**(id-indexed, `claimable(round,addr)` 루프)] vs ASSA 스펙 `releasable(address)` 단일집계 재설계. **chain.ts/UI 인덱싱 일관성의 선행 결정** — 확정 전 WS3.2/WS2.5 착수 금지.
+3. **세일 게이팅** — ✅ **확정(2026-05-30): per-round whitelist 유지** (ccm `whitelist[round][addr]` boolean 무변경 = 진짜 재사용·감사표면 0). KYCRegistry는 프런트/백엔드 게이팅 + 온체인 진실원천으로 **병용**. 대안 폐기: `purchase`에 `isKYCed` 주입(컨트랙트 변경·신규 감사표면·KYCRegistry mainnet 선행).
+4. **세일 베스팅 모델** — ✅ **확정(2026-05-30): CCMTGESale/CCMVesting self-contained id-indexed 유지** (`claimable(roundId, addr)` 루프, chain.ts/UI도 id 기반 인덱싱). TGE/cliff 회계는 스펙 §3.3 공식으로 재작성(WS1.3/1.4, 별도). 대안 폐기: `releasable(address)` 단일집계 재설계. → **WS3.2/WS2.5 착수 차단 해제.**
 5. **소스 공유** — [**옵션 A**(별도 패키지+git 의존성) 권고] C(단일 workspace) 폐기·서브모듈 거부. D(모노레포 통합)는 사용자 결정 시.
 6. **ASSAToken ERC20Votes** — [Phase1부터 포함 권고] Phase3 거버넌스 전제. _update/nonces 복잡도·감사범위 증가.
 6b. **burn 모델** — [**ERC20Burnable 유지 권고**(BMEBurner가 자기 잔액 burn, EOA burn 무해)] vs BURNER_ROLE 게이트(스펙 'EOA burn 금지' 준수·감사표면↑). WS1.6 인터페이스의 선행.

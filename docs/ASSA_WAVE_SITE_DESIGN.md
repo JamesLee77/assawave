@@ -698,7 +698,7 @@ DEVELOPMENT_PLAN §3 **옵션 A**(별도 공유 패키지 `assa-ccm-shared` + gi
 
 ## 6. 결정 필요 사항 (⚠️) + 권고
 
-> ⚠️ **선행 차단:** #9(베스팅 모델=DEVELOPMENT_PLAN 원결정 **#4**)·#10(게이팅) 확정 전 Dashboard/Vesting/Sale claim 분리 착수 금지.
+> ✅ **선행 차단 해제(2026-05-30 확정):** #9 베스팅=**ccm id-indexed 유지** · #10 게이팅=**per-round whitelist 유지** · #13 moss=**3분류 의미 audit**. → Dashboard/Vesting/Sale claim 분리 착수 차단 해제.
 
 | # | 결정 | 옵션 | **권고** | plan 원결정 |
 |---|---|---|---|---|
@@ -710,11 +710,11 @@ DEVELOPMENT_PLAN §3 **옵션 A**(별도 공유 패키지 `assa-ccm-shared` + gi
 | 6 | CJK 본문 | Noto KR vs Pretendard | **Pretendard(KO)** + Noto Sans JP(JA), Noto KR 폴백 | — |
 | 7 | **CJK 디스플레이** | Pretendard ExtraBold vs 각진 디스플레이 | **각진 CJK 디스플레이(Black Han Sans/Noto JP 900) 실측 게이트** — Righteous 라틴전용, Pretendard는 라운드라 BI 각짐과 이질 | — |
 | 8 | 차트 라이브러리 | ccm 인라인 SVG vs Recharts | **재사용=ccm SVG 패턴 fork(의존성 0)**, Recharts는 Dashboard 도넛·BME 등 **신규 화면 한정** 도입 | — |
-| 9 | **베스팅 인덱싱** | id-indexed vs `releasable(address)` | **CCMVesting self-contained id-indexed 유지**(`claimable(round,addr)` 루프) — Dashboard/Vesting/claim 분리의 선행 | **#4** |
-| 10 | 세일 게이팅 | 온체인 whitelist boolean vs merkle proof 주입 | **per-round whitelist 유지(컨트랙트 무변경)** — KYCRegistry는 프런트/백엔드 게이팅+온체인 진실원천 병용. proof-fetch UI는 스펙 모델 채택 시만 | — |
+| 9 | **베스팅 인덱싱** | id-indexed vs `releasable(address)` | ✅ **확정: CCMVesting self-contained id-indexed 유지**(`claimable(roundId,addr)` 루프) | **#4** |
+| 10 | 세일 게이팅 | 온체인 whitelist boolean vs merkle proof 주입 | ✅ **확정: per-round whitelist 유지(컨트랙트 무변경)** — KYCRegistry는 프런트/백엔드 게이팅+온체인 진실원천 병용. proof-fetch UI 불필요 | plan **#3** |
 | 11 | 소스 공유 | 옵션 A vs 모노레포 | **옵션 A**(별도 패키지+git 의존성) | **#5** |
 | 12 | 완료 상태 색 | 레드 통일 vs Green 분리 | **완료=Green, 진행중=Coral, CTA=brand-pressed**(WCAG·의미) | — |
-| 13 | **moss/clay 매핑** | 플랫 리네임 vs 의미 분기 | **§1.0a 3분류 audit 후 분기**(브랜드/데이터/positive) — 플랫 리네임은 데이터·성공 오염 | — |
+| 13 | **moss/clay 매핑** | 플랫 리네임 vs 의미 분기 | ✅ **확정: §1.0a 3분류 audit 후 분기**(브랜드/데이터/positive). WS2.1 = audit 기반 의미 분기로 격상 | — |
 | 14 | **admin 세일 라우트명** | `/tge` 유지 vs `/sale` rename | rename 시 명시 결정 + **personas.ts 두 맵에 신규 키 추가 선행** | **#14**(SIWE) |
 | 15 | **BI 마스터 weight** | 굵은 워드마크 vs 얇은 락업 | **굵은 워드마크=Primary**, 얇은 ASSA=세컨더리, ▶+wave 심볼=마크 | — |
 
