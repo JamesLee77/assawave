@@ -1,0 +1,21 @@
+{
+  "common": {
+    "appName": "ASSA WAVE",
+    "official": "公式ドメイン: assawave.io"
+  },
+  "nav": {
+    "tokenomics": "トークノミクス",
+    "roadmap": "ロードマップ",
+    "faq": "FAQ",
+    "sale": "セール参加"
+  },
+  "footer": {
+    "terms": "利用規約",
+    "privacy": "プライバシー",
+    "disclaimer": "免責事項"
+  },
+  "home": {
+    "eyebrow": "K-POP · WEB3 · WAVE",
+    "sub": "ASSA WAVE — 音楽・ファンダム・Web3が出会う場所。トークンセール、無利子ステーキング、消費競争。"
+  }
+}

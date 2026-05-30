@@ -1,0 +1,21 @@
+{
+  "common": {
+    "appName": "ASSA WAVE",
+    "official": "공식 도메인: assawave.io"
+  },
+  "nav": {
+    "tokenomics": "토크노믹스",
+    "roadmap": "로드맵",
+    "faq": "FAQ",
+    "sale": "세일 참여"
+  },
+  "footer": {
+    "terms": "이용약관",
+    "privacy": "개인정보",
+    "disclaimer": "고지"
+  },
+  "home": {
+    "eyebrow": "K-POP · WEB3 · WAVE",
+    "sub": "ASSA WAVE — 음악·팬덤·Web3가 만나는 곳. 토큰 세일, 무이자 스테이킹, 소비 경쟁."
+  }
+}

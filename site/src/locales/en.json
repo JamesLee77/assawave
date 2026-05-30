@@ -1,0 +1,21 @@
+{
+  "common": {
+    "appName": "ASSA WAVE",
+    "official": "Official domain: assawave.io"
+  },
+  "nav": {
+    "tokenomics": "Tokenomics",
+    "roadmap": "Roadmap",
+    "faq": "FAQ",
+    "sale": "Join Sale"
+  },
+  "footer": {
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "disclaimer": "Disclaimer"
+  },
+  "home": {
+    "eyebrow": "K-POP · WEB3 · WAVE",
+    "sub": "ASSA WAVE — where music, fandom and Web3 meet. Token sale, no-yield staking, spend-to-compete."
+  }
+}

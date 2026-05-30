@@ -3,12 +3,12 @@
 // 용도: 런타임 SVG/차트(VestingTimeline·AllocationRing·EmissionCurve 등)가 색을
 //       JS 값으로 읽을 때 사용. CSS 클래스가 아니라 이 함수를 참조한다.
 // 결정 #13 (moss audit): data 팔레트에는 brand red를 절대 넣지 않는다.
-//   - 브랜드 강조 = brand / brandOn* (텍스트는 AA 보정값)
+//   - 브랜드 강조 = brand / brandOn (텍스트는 AA 보정값)
 //   - 데이터 측정 = data[] (중립 다색)
 //   - 상태       = positive / warning / destructive
 // index.css의 :root/[data-theme] 값과 1:1로 일치시켜 유지보수한다.
 
-export type ThemeName = "light" | "dark";
+export type Theme = "light" | "dark";
 
 export interface Tokens {
   // surface / text
@@ -69,15 +69,15 @@ const DARK: Tokens = {
   data: ["#4cc4d6", "#e0863a", "#8b80f0", "#4fb477", "#c9a24b"],
 };
 
-const TOKENS: Record<ThemeName, Tokens> = { light: LIGHT, dark: DARK };
+const TOKENS: Record<Theme, Tokens> = { light: LIGHT, dark: DARK };
 
 /** 현재 테마의 토큰 묶음을 반환. 차트/SVG에서 색을 JS로 읽을 때 사용. */
-export function getTokens(theme: ThemeName): Tokens {
+export function getTokens(theme: Theme): Tokens {
   return TOKENS[theme];
 }
 
 /** <html data-theme> 속성에서 현재 테마를 읽는다(기본 dark). SSR/초기 렌더 안전. */
-export function readTheme(): ThemeName {
+export function readTheme(): Theme {
   if (typeof document === "undefined") return "dark";
   return document.documentElement.dataset.theme === "light" ? "light" : "dark";
 }
