@@ -1,0 +1,381 @@
+@import "tailwindcss";
+@import "@rainbow-me/rainbowkit/styles.css";
+
+/* ───────────── Fonts ─────────────
+ * Hallyu Cinematic: Space Grotesk(display/headlines) + Plus Jakarta Sans(body/UI).
+ * CJK: Pretendard(KO) + Noto Sans JP(JA) — 라틴 디스플레이는 Space Grotesk.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;700;900&display=swap");
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css");
+
+/* ───────────── Design tokens ─────────────
+ * [data-theme] 변수 스왑 + @theme에서 --color-* 참조.
+ * moss audit #13: data/positive에 brand red 금지. 브랜드=Red #EF2525 + 다크 캔버스.
+ * WCAG: 흰 글자 on #EF2525 = 4.23 FAIL → Primary 면은 --brand-pressed, 레드 텍스트는 --brand-on-*.
+ */
+:root,
+[data-theme="light"] {
+  --paper: #ffffff;
+  --paper-deep: #f5f5f7;
+  --surface-2: #eeeef2;
+  --surface-3: #e8e8ee;
+  --ink: #0f172a;
+  --ink-soft: #475569;
+  --ink-dim: #6b748a;
+  --rule: #e3e3ea;
+  --rule-strong: #d2d2dc;
+  --nav-bg: rgba(255, 255, 255, 0.82);
+
+  --brand: #ef2525;
+  --brand-hover: #d93a26;
+  --brand-pressed: #c81e14;
+  --brand-on-light: #c81e14;
+  --brand-on-dark: #c81e14;
+  --red-deep: #b8141a;
+  --coral: #d9531f;
+
+  --positive: #1f9d57;
+  --warning: #b45309;
+  --destructive: #dc2626;
+  --gold: #b8860b;
+
+  /* DATA 시각화 — brand red 미포함 */
+  --data-1: #2f7d8c;
+  --data-2: #c4702a;
+  --data-3: #5b54b8;
+  --data-4: #2f8f5b;
+  --data-5: #8a6d3b;
+
+  /* 시네마틱 캔버스(라이트는 보조) — 사진 위 텍스트용 딥 베일 */
+  --stage: #0a0a12;
+}
+
+[data-theme="dark"] {
+  --paper: #050508;
+  --paper-deep: #0b0b10;
+  --surface-2: #161625;
+  --surface-3: #1f1f2e;
+  --ink: #f8fafc;
+  --ink-soft: #94a3b8;
+  --ink-dim: #6b748a;
+  --rule: rgba(255, 255, 255, 0.08);
+  --rule-strong: rgba(255, 255, 255, 0.16);
+  --nav-bg: rgba(5, 5, 8, 0.72);
+
+  --brand: #ef2525;
+  --brand-hover: #ff3b3b;
+  --brand-pressed: #c81e14;
+  --brand-on-dark: #ff6b5e;
+  --red-deep: #b8141a;
+  --coral: #ff7a5e;
+
+  --positive: #34d399;
+  --warning: #fbbf24;
+  --destructive: #f87171;
+  --gold: #f59e0b;
+
+  /* 비비드 data 팔레트 */
+  --data-1: #14e2e2; /* teal */
+  --data-2: #ffba20; /* amber */
+  --data-3: #8b80f0; /* indigo */
+  --data-4: #4fb477; /* green */
+  --data-5: #c9a24b; /* sand */
+
+  --stage: #06060d;
+}
+
+@theme {
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-dim: var(--ink-dim);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-pressed: var(--brand-pressed);
+  --color-coral: var(--coral);
+
+  --color-positive: var(--positive);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+  --color-gold: var(--gold);
+
+  --color-data-1: var(--data-1);
+  --color-data-2: var(--data-2);
+  --color-data-3: var(--data-3);
+  --color-data-4: var(--data-4);
+  --color-data-5: var(--data-5);
+
+  /* Space Grotesk(display/headlines) + Plus Jakarta Sans(body/UI) */
+  --font-display: "Space Grotesk", "Pretendard Variable", system-ui, sans-serif;
+  --font-body: "Plus Jakarta Sans", "Pretendard Variable", system-ui, sans-serif;
+  --font-ui: "Plus Jakarta Sans", "Pretendard Variable", system-ui, sans-serif;
+  --font-data: "Space Grotesk", ui-monospace, sans-serif;
+}
+
+/* ───────────── Base ───────────── */
+html,
+body,
+#root {
+  min-height: 100vh;
+}
+
+html,
+body {
+  overflow-x: clip;
+}
+
+html {
+  background: var(--paper);
+  color: var(--ink);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  font-family: var(--font-body);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* CJK 폴백 — Space Grotesk는 라틴 전용. KO/JA 디스플레이는 Pretendard/Noto */
+:lang(ko) h1, :lang(ko) h2, :lang(ko) h3 {
+  font-family: "Pretendard Variable", system-ui, sans-serif;
+  font-weight: 800;
+}
+:lang(ja) h1, :lang(ja) h2, :lang(ja) h3 {
+  font-family: "Noto Sans JP", system-ui, sans-serif;
+  font-weight: 900;
+}
+
+/* 숫자 정렬 */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-data);
+}
+
+/* ───────────── BRAND 강조 ───────────── */
+em.italic-brand,
+.italic-brand {
+  font-style: normal;
+  color: var(--brand-on-light);
+  font-weight: 700;
+}
+[data-theme="dark"] em.italic-brand,
+[data-theme="dark"] .italic-brand {
+  color: var(--brand-on-dark);
+  text-shadow: 0 0 38px rgba(239, 37, 37, 0.45);
+}
+
+/* 섹션 키커 — 터미널 mono 톤 완화: body 폰트 + 줄어든 트래킹 */
+.eyebrow {
+  font-family: var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--brand-on-light);
+}
+[data-theme="dark"] .eyebrow {
+  color: var(--brand-on-dark);
+}
+
+.text-brand-accent {
+  color: var(--brand-on-light);
+}
+[data-theme="dark"] .text-brand-accent {
+  color: var(--brand-on-dark);
+}
+
+::selection {
+  background: var(--brand);
+  color: #ffffff;
+}
+
+input,
+select,
+textarea {
+  border-radius: 10px;
+}
+
+/* ───────────── Cinematic 시각 시스템 (Hallyu Cinematic) ───────────── */
+
+/* 라운드 컨테이너 — 구 chamfer(각진 클립) 자리. 클래스명 유지하되 둥근 코너로 재정의 */
+.chamfer { border-radius: 20px; }
+.chamfer-sm { border-radius: 14px; }
+.chamfer-lg { border-radius: 28px; }
+
+/* rim lighting — 그림자 대신 1px 내부 보더 */
+.rim { box-shadow: inset 0 0 0 1px var(--rule); }
+.rim-strong { box-shadow: inset 0 0 0 1px var(--rule-strong); }
+
+/* 라운드 카드 — 직각 spec-sheet 카드 대체 */
+.card {
+  border-radius: 20px;
+  background: var(--paper-deep);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+[data-theme="dark"] .card {
+  background: var(--surface-2);
+}
+
+/* status chip / 태그 pill */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  border-radius: 999px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+[data-theme="dark"] .chip {
+  background: rgba(255, 255, 255, 0.05);
+}
+.chip .sw { width: 8px; height: 8px; border-radius: 999px; flex: none; }
+
+/* nav link — red underline on hover */
+.nav-link {
+  position: relative;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  transition: color 0.2s ease;
+}
+.nav-link:hover { color: var(--ink); }
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  height: 2px;
+  width: 0;
+  border-radius: 999px;
+  background: var(--brand);
+  transition: width 0.25s ease;
+}
+.nav-link:hover::after { width: 100%; }
+
+/* Primary CTA — pill · 흰 글자 on --brand-pressed(AA) · red glow */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-pressed);
+  color: #ffffff;
+  min-height: 46px;
+  border-radius: 999px;
+  box-shadow: 0 8px 30px -10px rgba(239, 37, 37, 0.7);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+  cursor: pointer;
+  padding: 0 24px;
+  font-weight: 600;
+}
+.btn-primary:hover {
+  background: var(--brand-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 40px -10px rgba(239, 37, 37, 0.85);
+}
+
+/* Ghost CTA — pill · rim */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border-radius: 999px;
+  color: var(--ink);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+  transition: box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+  padding: 0 24px;
+  font-weight: 600;
+}
+.btn-ghost:hover {
+  box-shadow: inset 0 0 0 1px var(--brand);
+  color: var(--brand-on-dark);
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+}
+[data-theme="light"] .btn-ghost:hover { color: var(--brand-on-light); }
+
+/* focus-visible */
+:focus-visible {
+  outline: 2px solid var(--brand-on-light);
+  outline-offset: 2px;
+}
+[data-theme="dark"] :focus-visible { outline-color: var(--brand-on-dark); }
+
+/* ───────────── Premium Hallyu Cinematic v2.0 Extra Classes ───────────── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.3s ease;
+}
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 40px -10px rgba(239, 37, 37, 0.15);
+}
+[data-theme="light"] .glass-card {
+  background: rgba(15, 15, 24, 0.03);
+  border-color: rgba(15, 15, 24, 0.08);
+}
+[data-theme="light"] .glass-card:hover {
+  border-color: rgba(15, 15, 24, 0.16);
+  box-shadow: 0 10px 40px -10px rgba(239, 37, 37, 0.10);
+}
+.text-glow-red {
+  text-shadow: 0 0 20px rgba(239, 37, 37, 0.6);
+}
+.atmospheric-glow {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: 
+    radial-gradient(circle at 10% 20%, rgba(239, 37, 37, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(139, 128, 240, 0.04) 0%, transparent 40%);
+}
+
+/* Custom Scrollbar for premium feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--paper);
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand);
+}
