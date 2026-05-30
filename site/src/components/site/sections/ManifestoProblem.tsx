@@ -13,7 +13,7 @@ export default function ManifestoProblem() {
           style={{ width: 900, height: 420, left: "50%", top: "50%", transform: "translate(-50%,-50%)", filter: "blur(0px)" }}
         />
         <div className="relative z-10 mx-auto max-w-7xl px-5 md:px-10 text-center">
-          <span className="inline-flex items-center gap-3 font-data text-[12px] uppercase tracking-[0.2em] text-ink-dim mb-6">
+          <span className="inline-flex items-center gap-3 text-[12px] font-semibold uppercase tracking-[0.1em] text-ink-dim mb-6">
             <span aria-hidden="true" className="h-px w-7" style={{ background: "var(--rule-strong)" }} />
             {t("problem.label")}
             <span aria-hidden="true" className="h-px w-7" style={{ background: "var(--rule-strong)" }} />
@@ -35,7 +35,7 @@ export default function ManifestoProblem() {
             >
               <span aria-hidden="true" className="absolute top-0 left-0 h-0.5 w-full" style={{ background: "linear-gradient(90deg, var(--brand), transparent 70%)", opacity: 0.6 }} />
               <div className="flex items-start justify-between mb-6">
-                <span className="font-data text-[11px] font-bold uppercase tracking-[0.18em] text-brand-accent">
+                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-brand-accent">
                   FAIL · {String(i + 1).padStart(2, "0")}
                 </span>
                 <span className="font-display text-[52px] leading-none tracking-tight" style={{ color: "color-mix(in srgb, var(--ink) 8%, transparent)" }}>

@@ -4,7 +4,7 @@ import SectionLabel from "../SectionLabel";
 import Heading from "../Heading";
 import { useReducedMotion } from "../../../lib/useReducedMotion";
 
-const SUBLABEL = "font-data text-[11px] uppercase tracking-[0.16em] text-ink-soft";
+const SUBLABEL = "text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-soft";
 
 function hexPoints(cx: number, cy: number, r: number): string {
   const pts: string[] = [];
@@ -85,8 +85,8 @@ export default function NodeNetwork() {
       <p className="text-ink-soft text-lg leading-relaxed max-w-[680px] mb-12">{t("node.lede")}</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
-        {/* 디바이스 일러스트 (원본 — 라이선스 확보 시 /brand/node-device.jpg 로 교체 가능) */}
-        <div className="border border-rule bg-paper-deep p-6 md:p-8">
+        {/* 디바이스 일러스트 (원본 — 증분3에서 시네마틱 사진 백드롭 적용 예정) */}
+        <div className="card p-6 md:p-8">
           <NodeDevice statusLabel={t("node.status")} />
           <div className="mt-4 flex items-baseline justify-between border-t border-rule pt-4">
             <span className="font-display text-ink text-xl">{t("node.deviceName")}</span>
@@ -97,7 +97,7 @@ export default function NodeNetwork() {
         {/* 스펙 그리드 */}
         <div>
           <p className={`${SUBLABEL} mb-4`}>{t("node.specsLabel")}</p>
-          <div className="grid grid-cols-2 gap-px bg-rule border border-rule">
+          <div className="grid grid-cols-2 gap-px bg-rule rounded-[20px] overflow-hidden rim">
             {specs.map(([label, value]) => (
               <div key={label} className="bg-paper-deep p-4 md:p-5">
                 <div className="font-display text-ink text-lg leading-tight">{value}</div>
@@ -106,7 +106,7 @@ export default function NodeNetwork() {
             ))}
           </div>
           <p className="mt-4 text-ink-soft text-[12px] leading-relaxed">{t("node.note")}</p>
-          <a href="/whitepaper" className="mt-6 hit-44 inline-flex items-center gap-1.5 px-6 border border-rule text-ink hover:text-brand hover:border-brand transition-colors">
+          <a href="/whitepaper" className="btn-ghost mt-6 gap-1.5 px-6 text-[14px] font-semibold">
             {t("node.ctaPaper")}<span aria-hidden="true">→</span>
           </a>
         </div>

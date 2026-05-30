@@ -35,23 +35,12 @@
       "micro": "ASSA — the star of the stage.",
       "ctaApp": "Open App",
       "ctaPaper": "Read Whitepaper",
-      "factsLabel": "At a glance",
-      "factsBadge": "Informational",
-      "facts": [
-        ["Token", "$ASSA"],
-        ["Max supply", "10B"],
-        ["Network", "Base"],
-        ["Standard", "ERC-20"]
-      ],
       "chips": [
         ["Streaming → Value", "data-1"],
         ["Fan rewards", "data-2"],
         ["On-chain proof", "data-3"],
         ["Fan-owned", "data-4"]
-      ],
-      "vizLabel": "Hallyu Pulse · Live",
-      "vizFoot": "Fan activity → value signal",
-      "vizChannels": "22 channels"
+      ]
     },
     "problem": {
       "label": "Manifesto",
