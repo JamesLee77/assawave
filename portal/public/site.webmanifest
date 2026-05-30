@@ -1,0 +1,11 @@
+{
+  "name": "ASSA WAVE Investor Portal",
+  "short_name": "ASSA",
+  "icons": [
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/favicon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "theme_color": "#D93A26",
+  "background_color": "#0E0F12",
+  "display": "standalone"
+}
