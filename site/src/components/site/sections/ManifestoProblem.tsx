@@ -30,8 +30,7 @@ export default function ManifestoProblem() {
           {items.map(([h, b], i) => (
             <article
               key={i}
-              className="chamfer rim relative overflow-hidden p-7 md:p-8 transition-transform duration-200 hover:-translate-y-1"
-              style={{ background: "linear-gradient(165deg, var(--paper-deep), color-mix(in srgb, var(--paper-deep) 80%, #000 20%))" }}
+              className="glass-card rounded-[20px] relative overflow-hidden p-7 md:p-8"
             >
               <span aria-hidden="true" className="absolute top-0 left-0 h-0.5 w-full" style={{ background: "linear-gradient(90deg, var(--brand), transparent 70%)", opacity: 0.6 }} />
               <div className="flex items-start justify-between mb-6">

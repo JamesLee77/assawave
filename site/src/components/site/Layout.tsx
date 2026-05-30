@@ -1,5 +1,6 @@
 import { Link, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import WaveMark from "../brand/WaveMark";
 import ThemeToggle from "./ThemeToggle";
 
@@ -21,7 +22,8 @@ export default function Layout() {
   ];
 
   return (
-    <div className="min-h-screen bg-paper text-ink flex flex-col">
+    <div className="min-h-screen bg-paper text-ink flex flex-col relative">
+      <div className="atmospheric-glow" aria-hidden="true" />
       {/* 슬림 반피싱 고지 — 차분한 단일 스트립 */}
       <div role="note" className="border-b border-rule" style={{ background: "linear-gradient(90deg, rgba(239,37,37,0.10), transparent 62%)" }}>
         <div className="mx-auto max-w-7xl px-5 md:px-10 h-9 flex items-center gap-2.5 text-[12px] text-ink-soft">
@@ -43,6 +45,7 @@ export default function Layout() {
             ))}
           </nav>
           <div className="flex items-center gap-3">
+            <ConnectButton chainStatus="icon" showBalance={false} />
             <a
               href={APP_URL}
               className="btn-primary hidden sm:inline-flex px-5 text-[13px] font-semibold tracking-wide"

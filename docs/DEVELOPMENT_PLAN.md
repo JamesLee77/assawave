@@ -1,365 +1,373 @@
-# ASSA WAVE — 개발 계획서 (ccm 기반)
+# ASSA WAVE — Development Plan (ccm-based)
 
-> 작성: ASSA WAVE 기술 디렉터 · 기준일 2026-05-30 · Phase 1(MVP) 우선
-> 근거: ASSA 사양서 2종 + ccm 실소스 검증 + 적대적 갭 분석(reuse-accuracy / dependency-sequencing / security-compliance) 반영
-> **검증 사실(소스 대조 완료):**
-> - **CCMStaking = 이자형** (`R0_BPS=1_000`·`POOL_INIT 200M`·`poolRemaining`·`_harvest`·`rewardDebt`·`priceOracle`·`pendingReward`·`RewardClaimed` 확인) → veASSA 무이자는 **신규 재작성**.
-> - **CCMToken** = `ERC20,ERC20Burnable,ERC20Capped,ERC20Pausable,ERC20Permit,AccessControl`, **5B cap**, `_update` **3-way override**(`ERC20,ERC20Capped,ERC20Pausable`), `nonces` override 없음, **Votes 없음**, **BURNER_ROLE 없음**(ERC20Burnable=누구나 자기 잔액 소각), MINTER_ROLE은 admin→TGESale/Vesting/Staking에 부여(스펙의 "MiningRewards만" 과 불일치).
-> - **CCMTGESale** = `claimable`이 `startTime` 기준 선형(`vested=total*elapsed/vestSeconds`), **cliff는 첫 청구만 게이트(cliff-jump)**, **TGE 즉시언락 개념 없음**, 게이팅은 `whitelist[roundId][addr]` 매핑(**KYCRegistry 미참조·Merkle 아님**), **Pausable 없음**.
-> - **백엔드 = 이벤트 로그 인덱싱 코드 전무** — `chain.ts`/`holders.ts`는 `readContract` view 폴링 + D1 upsert + `sync_runs`/`snapshot`만. `getLogs`/`blockCursor`/`sale_orders` **없음**.
-> - **mainnet KYCRegistry = `0x0`**(Sepolia 리허설 `0x9172D6eaF05587b595f4eE894B4C7917Be652E46`), wrangler crons 단일 `*/30`, 토큰/베스팅 mainnet 라이브 2026-05-12.
-> - **Safe = 3-of-4 리허설 스크립트 / 3-of-5 mainnet 목표**(4-of-7 자산 없음). **CCMTimelock 48h floor**.
-> - **`_dex-*` 스크립트 = Base Sepolia 전용**(`chainId!==84532n` throw, Uniswap V3, Mock USDC). **`_dry-run-phase1.ts` = cap 4.99B 하드코딩, Token+Vesting만**.
-> - **ccm은 제3자 외부 감사 보고서가 코드베이스에 없음** — `SECURITY_REVIEW.md` 등은 자체 문서. **"감사 승계/델타"는 성립하지 않음**(아래 §6 정정).
-
----
-
-## 0. 개요
-
-### 목표
-ASSA WAVE Phase 1(MVP)을 **ccm 라이브 기반(Base mainnet 8453)을 재사용**하여 최단 경로로 출시한다. Phase 1 산출물: ASSAToken(+ERC20Votes) · 3라운드 TokenSale · 카테고리 TokenVesting · 무이자 StakingLock(veASSA) · BMEBurner · 거버넌스 배선(Safe+Timelock+KYCRegistry) · 4개 dApp/사이트(site·portal·admin·testnet) · Cloudflare Worker 백엔드 · **신규 이벤트 인덱서**. Phase 2/3는 말미 개요만.
-
-### 범위
-- **In(Phase 1):** 토큰·세일·베스팅·veASSA·BME·SIWE 인증·세일/대시보드/락업 UI·운영 콘솔·랜딩(KO/EN/JA)·이벤트 인덱서·외부 감사 2건·mainnet 배포.
-- **Out(Phase 2/3 개요만):** ConsumptionEngine, StarRanking/FandomBattle, EdgeNode/MiningRewards, ERC-1155 NFT, ASSAGovernor, PredictionMarket, L3.
-
-### 핵심 원칙
-1. **ccm 기반 재사용** — fork+적응을 1순위로, 실질 신규는 ① veASSA 무이자 ② BMEBurner ③ ERC20Votes ④ **이벤트 인덱서** ⑤ **mainnet KYC 운영 파이프라인** ⑥ **세일 TGE/베스팅 회계 재작성**으로 한정.
-2. **공급-수요 균형** — 세일/베스팅/veASSA는 공급 잠금, BMEBurner는 외부 매출 기반 소각으로 수요 환류.
-3. **무이자 락업(non-yield)** — veASSA는 보상·emission·oracle 경로가 **존재하지 않음**을 음성(negative) 불변식 + 정적 ABI 검사로 강제.
-4. **감사 게이트(audit gate)** — **2개 SOW로 분리.** 감사#1(Token+Votes·Sale·Vesting·KYCRegistry)=세일 게이트(M2), 감사#2(veASSA·BMEBurner)=배포 게이트(M3). **각각 0 critical/high·medium 전부 mitigated** + Safe/Timelock 핸드오프 증명을 하드 게이트로. **"델타 감사" 표현 폐기**(ccm baseline 외부감사 부재).
-5. **비수탁(non-custodial)** — 백엔드는 자금/키 미보유. SIWE·읽기 캐시·webhook만. 결제는 사용자 지갑이 USDC를 Treasury Safe로 직접 전송.
-6. **법무 GO 게이트** — VAUPA/증권성 법무 의견서 수령을 mainnet 세일의 **명시적 하드 게이트**로(§5/§6).
+> Written by: ASSA WAVE Technical Director · Reference Date: 2026-05-30 · Phase 1 (MVP) First Priority
+> Basis: 2 ASSA Specification Documents + ccm Actual Source Verification + Adversarial Gap Analysis (reuse-accuracy / dependency-sequencing / security-compliance) Reflected
+> **Verified Facts (Source Code Cross-Reference Completed):**
+> - **CCMStaking = Yield-bearing** (Confirmed `R0_BPS=1_000` · `POOL_INIT 200M` · `poolRemaining` · `_harvest` · `rewardDebt` · `priceOracle` · `pendingReward` · `RewardClaimed`) → Non-yield veASSA is a **new rewrite**.
+> - **CCMToken** = `ERC20,ERC20Burnable,ERC20Capped,ERC20Pausable,ERC20Permit,AccessControl`, **5B cap**, `_update` **3-way override** (`ERC20,ERC20Capped,ERC20Pausable`), no `nonces` override, **no Votes**, **no BURNER_ROLE** (ERC20Burnable = anyone can burn their own balance), MINTER_ROLE granted from admin → TGESale/Vesting/Staking (inconsistent with the spec's "MiningRewards only").
+> - **CCMTGESale** = `claimable` is linear based on `startTime` (`vested=total*elapsed/vestSeconds`), **cliff gates only the first claim (cliff-jump)**, **no concept of TGE immediate unlock**, gating via `whitelist[roundId][addr]` mapping (**does not reference KYCRegistry · not Merkle**), **no Pausable**.
+> - **Backend = Zero event log indexing code** — `chain.ts`/`holders.ts` only perform `readContract` view polling + D1 upsert + `sync_runs`/`snapshot`. No `getLogs`/`blockCursor`/`sale_orders`.
+> - **mainnet KYCRegistry = `0x0`** (Sepolia rehearsal `0x9172D6eaF05587b595f4eE894B4C7917Be652E46`), single wrangler cron `*/30`, Token/Vesting mainnet live 2026-05-12.
+> - **Safe = 3-of-4 rehearsal script / 3-of-5 mainnet target** (no 4-of-7 assets). **CCMTimelock 48h floor**.
+> - **`_dex-*` scripts = Base Sepolia only** (throws if `chainId!==84532n`, Uniswap V3, Mock USDC). **`_dry-run-phase1.ts` = 4.99B cap hardcoded, Token+Vesting only**.
+> - **ccm has no third-party external audit report in the codebase** — `SECURITY_REVIEW.md` etc. are internal documents. **"Audit inheritance / delta audit" is not valid** (corrected in §6 below).
 
 ---
 
-## 1. 기술 스택 정합 (ccm 기준 재조정)
+## 0. Overview
 
-| 영역 | ASSA 사양서 권고 | ccm 실제 (채택) | 비고 |
+### Goals
+Launch ASSA WAVE Phase 1 (MVP) on the shortest path by **reusing the live ccm codebase (Base mainnet 8453)**. Phase 1 deliverables: ASSAToken (+ERC20Votes) · 3-round TokenSale · categorized TokenVesting · non-yield StakingLock (veASSA) · BMEBurner · governance integration (Safe + Timelock + KYCRegistry) · 4 dApps/websites (site · portal · admin · testnet) · Cloudflare Worker backend · **new event indexer**. Phase 2/3 will only be outlined at the end.
+
+### Scope
+- **In (Phase 1):** Token · Sale · Vesting · veASSA · BME · SIWE authentication · Sale/Dashboard/Lockup UI · Operations console · Landing page (KO/EN/JA) · Event indexer · 2 external audits · mainnet deployment.
+- **Out (Phase 2/3 outline only):** ConsumptionEngine, StarRanking/FandomBattle, EdgeNode/MiningRewards, ERC-1155 NFT, ASSAGovernor, PredictionMarket, L3.
+
+### Core Principles
+1. **ccm-Based Reuse** — Fork + adaptation as top priority; actual new features are strictly limited to ① non-yield veASSA, ② BMEBurner, ③ ERC20Votes, ④ **event indexer**, ⑤ **mainnet KYC operations pipeline**, and ⑥ **rewrite of Sale TGE / Vesting accounting**.
+2. **Supply-Demand Balance** — Sale/Vesting/veASSA lock the supply, while BMEBurner feeds demand back by burning based on external revenue.
+3. **Non-yield Lockup** — Enforce the **absence** of reward, emission, or oracle paths in veASSA through negative invariants + static ABI checks.
+4. **Audit Gate** — **Split into 2 SOWs.** Audit #1 (Token+Votes · Sale · Vesting · KYCRegistry) = Sale Gate (M2); Audit #2 (veASSA · BMEBurner) = Deployment Gate (M3). **Must have 0 critical/high findings, with all medium findings mitigated** + Safe/Timelock handoff proof as a hard gate. **Discard the term "delta audit"** due to the absence of a baseline external audit for ccm.
+5. **Non-custodial** — Backend does not hold any funds or private keys. Uses only SIWE, read cache, and webhooks. Payments are directly sent as USDC from the user's wallet to the Treasury Safe.
+6. **Legal GO Gate** — Acquisition of VAUPA/securities legal opinion is an **explicit hard gate** for the mainnet sale (§5/§6).
+
+---
+
+## 1. Technical Stack Alignment (Realigned based on ccm)
+
+| Area | ASSA Spec Recommendation | Actual ccm (Adopted) | Remarks |
 |---|---|---|---|
-| 온체인 프레임워크 | Foundry | **Hardhat 2.22 + OZ v5 + ethers v6 + typechain + TS**, Solidity 0.8.24(cancun, optimizer 200) | `hardhat.config.ts` 그대로. **Foundry는 invariant/fuzz 전용으로 신규 추가**(ccm엔 fuzz 툴링 0개) |
-| 프런트 | Next.js 14 App Router | **Vite 8 + React 18 + Tailwind 4 + wagmi + viem + RainbowKit + TS** | 4앱(site/admin/portal/testnet) 분리. App Router 미사용 |
-| 백엔드 | NestJS + Postgres + Redis | **Cloudflare Workers(Hono) + D1 + viem + Resend + vitest** | SIWE·세션·me·sync·cron fork. **단 이벤트 인덱서는 ccm에 없음 → 신규** |
-| 인덱서 | Ponder / The Graph | **Worker 직접읽기 + D1 캐시 + cron** (view 폴링) **+ 신규 eventIndexer(getLogs+커서)** | ⚠️ ccm은 view 폴링만 보유. Purchased/Locked/Burned 추적은 **신규 인덱싱 서브시스템**(§2.3) |
-| 모노레포 | Turborepo | **별도 repo 2개 유지 + 공유 패키지 git 의존성**(아래 §3 재설계) | ⚠️ 단일 pnpm-workspace는 단일 git repo 전제 → 옵션 C 원안 폐기 |
-| 세일 게이팅 | Merkle allowlist | ⚠️ **컨트랙트 변경 결정 필요**: per-round whitelist 유지(무변경) vs KYCRegistry 조회(신규 변경) | CCMTGESale은 `whitelist[round][addr]`만. KYCRegistry 미참조 |
-| 결제 통화 | USDC | **canonical Base USDC(6dec)** | Sale.tsx 정확금액 approve 구현. 온램프는 Phase 2 |
-| 결제·키 수탁 | — | **비수탁**(세일 USDC 수령처=Treasury Safe) | |
+| On-chain Framework | Foundry | **Hardhat 2.22 + OZ v5 + ethers v6 + typechain + TS**, Solidity 0.8.24 (cancun, optimizer 200) | Retain `hardhat.config.ts` as-is. **Add Foundry specifically for invariant/fuzz testing** (0 fuzz tooling existed in ccm). |
+| Frontend | Next.js 14 App Router | **Vite 8 + React 18 + Tailwind 4 + wagmi + viem + RainbowKit + TS** | Separated into 4 apps (site/admin/portal/testnet). App Router is not used. |
+| Backend | NestJS + Postgres + Redis | **Cloudflare Workers (Hono) + D1 + viem + Resend + vitest** | Fork SIWE · session · me · sync · cron. **However, event indexer is absent in ccm → New**. |
+| Indexer | Ponder / The Graph | **Direct Worker Read + D1 Cache + Cron** (view polling) **+ New eventIndexer (getLogs + cursor)** | ⚠️ ccm only has view polling. Tracking Purchased/Locked/Burned requires a **new indexing subsystem** (§2.3). |
+| Monorepo | Turborepo | **Maintain 2 separate repos + shared package git dependencies** (redesigned in §3 below) | ⚠️ A single pnpm-workspace assumes a single git repo → Discard original Option C. |
+| Sale Gating | Merkle allowlist | ⚠️ **Contract Change Decision Required**: Keep per-round whitelist (no change) vs. Query KYCRegistry (new change) | CCMTGESale only uses `whitelist[round][addr]`. KYCRegistry is not referenced. |
+| Payment Currency | USDC | **canonical Base USDC (6dec)** | Sale.tsx implements exact amount approval. On-ramp planned for Phase 2. |
+| Payment/Key Custody | — | **Non-custodial** (Sale USDC recipient = Treasury Safe) | |
 
 ---
 
-## 2. 재사용 맵 (컴포넌트 → ccm 소스 → action → 변경점)
+## 2. Reuse Map (Component → ccm Source → Action → Changes)
 
-> **라벨 정정 원칙:** 갭 분석에 따라 '재사용/fork'로 과대 라벨링된 항목 중 실제 신규 구현이 큰 6개 영역(이벤트 인덱서·mainnet KYC 운영·세일 TGE/베스팅 회계·Safe 4-of-7 키세리머니·ERC20Votes·StakingLock)을 **[재사용+신규]** 또는 **[신규]**로 재분류했다. action 라벨이 곧 감사 범위·일정 산정의 입력이다.
+> **Label Correction Principle:** Based on the gap analysis, items that were overly labeled as 'reuse/fork' but require significant new implementation—specifically 6 areas (event indexer, mainnet KYC operations, sale TGE/vesting accounting, Safe 4-of-7 key ceremony, ERC20Votes, and StakingLock)—have been reclassified as **[Reuse+New]** or **[New]**. The action labels serve as direct inputs for estimating audit scopes and schedules.
 
-### 2.1 온체인 컨트랙트
+### 2.1 On-chain Contracts
 
-| ASSA 컴포넌트 | ccm 소스 | action | 핵심 변경점 |
+| ASSA Component | ccm Source | Action | Key Changes |
 |---|---|---|---|
-| **ASSAToken** (ERC20+Permit+Burnable+Capped+Pausable+Votes, 10B cap) | `CCMToken.sol` | **[재사용+신규] / 감사 풀스코프** | (1) cap 5B→`10_000_000_000e18`, **ERC20Capped 상속 유지**(수동 require 금지 — `_mint` 우회 차단). (2) **ERC20Votes 추가** — `_update` override를 `(ERC20,ERC20Capped,ERC20Pausable,ERC20Votes)`로 확장 + `nonces()`를 `(ERC20Permit,Nonces)` override **신규**(현재 없음). (3) name/symbol/Permit 'ASSA WAVE'/'ASSA'. (4) **burn 모델 결정**(아래 결정#6b): ERC20Burnable 유지(BMEBurner가 자기 잔액 burn) vs BURNER_ROLE 신규 게이트. (5) **MINTER_ROLE 정책**: ccm은 admin→Sale/Vesting/Staking에 부여 → ASSA는 TGE float 시점에 한정, Phase2 MiningRewards로 이관. transfer 핫패스가 바뀌므로 **fork가 아닌 신규 감사 대상**. |
-| **TokenSale** (3라운드 고정가, USDC, 게이팅, TGE+베스팅) | `CCMTGESale.sol` | **[재사용+신규] / 회계 재작성** | (1) 3라운드 KRW 30/50/70원→USDC 단가 동결. (2) ⚠️ **claimable 재작성** — 현재는 `startTime` 기준 선형이라 cliff-jump 발생·TGE 즉시분 없음. 스펙 §3.3 공식(`total*tgeBps/1e4 + (now>start+cliff?linearPostCliff:0) − claimed`)을 **단일 진실원천**으로 채택, ccm의 startTime-선형 폐기. 선형은 **cliff 종료 시점부터** 시작(`[start+cliff, start+duration]`). 즉시분/선형분 이중계상·언더플로 방지. (3) **게이팅 결정**(결정#3): per-round whitelist 유지(컨트랙트 무변경=진짜 재사용) vs `purchase()`에 `require(kyc.isKYCed(msg.sender))` + 생성자 registry immutable 주입(**신규 변경·새 감사표면**). (4) ⚠️ **Pausable 신규**(스펙 §3.2 요구, ccm 없음): `purchase` whenNotPaused, claim/withdrawUSDC는 정지 예외. (5) `withdrawUSDC` 수령처=Treasury Safe. |
-| **TokenVesting** (카테고리 cliff+linear, revocable) | `CCMVesting.sol` | **[재사용+신규] / 회계 재작성** | (1) Schedule에 `tgeBps(uint16)`·`category(uint8)` 추가. (2) ⚠️ `releasable` **동일 재작성**(CCMVesting도 startTime-선형 결함) — 선형은 cliff 후 시작, TGE 즉시분 가산, `claimed<=total`·`releasable>=0` 불변식. (3) Founder 12m/48m·Team 12m/36m·Investor·Partner·ECO 파라미터 배포 스크립트화. |
-| **StakingLock (veASSA)** (무이자·비전송·시간감쇠) | `CCMStaking.sol` | **[신규] / 사실상 재작성** | ⚠️ CCMStaking 이자형 확인. **제거:** `priceOracle`·`R0_BPS`·`POOL_INIT`·`poolRemaining`·`rewardDebt`·`_harvest`·`pendingReward`·`currentYieldRateBps`·`recoverPoolRemainder`·`RewardClaimed` 전 경로. **신규:** Curve veToken식 `Lock{amount,start,end}`, `lock(amt,dur≤4y)`/`increaseAmount`/`increaseUnlockTime`/`withdraw`(end 후 원금만)/lock 병합 회계, `votingPower=amount*(end-now)/MAXTIME` 선형감쇠 + **과거시점 조회용 체크포인트/history**, **transfer/approve revert(진짜 비전송)**. **ERC5805(votes) 호환 여부 결정**(결정#16). **재사용 골격:** import·CEI·AccessControl/ReentrancyGuard/SafeERC20만. **veToken 체크포인트는 고난도 감사 항목** → §4 XL 재산정. |
-| **BMEBurner** (USDC→ASSA swap+영구소각) | 없음(신규) | **[신규]** | `processRevenue(usdc,burnBps,minAssaOut)` → safeTransferFrom → DEX swap(deadline·minAssaOut) → `ASSA.burn`. **호출자=Safe/Timelock 경유**(비수탁 §0-5 정합, 백엔드 직접 호출 금지). minAssaOut은 **on-chain TWAP AND/OR Chainlink 중 보수적 값**으로 강제(keeper는 maxSlippageBps만 설정, push 단일소스 금지). 소각=address(0)만. **선행 의존: ASSA/USDC mainnet 풀 생성+LP 시딩**(아래 LP 태스크). |
-| **BME LP 부트스트랩** (mainnet 풀+LP) | `_dex-*.ts`(⚠️**Base Sepolia/Uniswap V3/Mock USDC 전용**) | **[신규]** | ⚠️ `_dex-*`는 `chainId!==84532n` throw. mainnet Aerodrome(결정#12) 라우터/풀 통합·ASSA/USDC 풀 생성·초기 LP 시딩(자금 출처·규모 명시)은 **전량 신규**이며 **BMEBurner 배포의 크리티컬 선행**. `_dex-*`는 testnet 스모크 참고용으로만. 최소 유동성 임계 불변식(swap≤풀의 X%). |
-| **Treasury** (세일 USDC 수령, 분배 버킷) | `deploy-safe-3of4.ts`+`transfer-admin-to-timelock.ts` | **[재사용+신규]** | 전용 Treasury.sol 대신 **Gnosis Safe + Timelock**(ccm 패턴). ⚠️ ccm은 **3-of-4 리허설/3-of-5 목표** — ASSA 4-of-7(결정#9)은 **스크립트 파라미터화[재사용] + 7-서명자 키 세리머니/하드웨어 분배 런북[신규]**. 온체인 버킷 회계 필요 시에만 Treasury.sol 신규. |
-| **Timelock** (48h) | `CCMTimelock.sol` | **[그대로 재사용]** | 48h MIN_DELAY floor, 31337/1337만 단축. 이름만 ASSATimelock. UUPS 진화모듈 채택 시 UPGRADER_ROLE 부여. |
-| **KYCRegistry** (컨트랙트) | `CCMKYCRegistry.sol` | **[재사용] / 운영은 신규 분리** | `isKYCed` 단일 bool. ⚠️ **mainnet 미배포(`0x0`)** — 세일 전 배포 필수. **단일 bool에 jurisdiction/expiry 없음** → US/CN·제재 차단은 **온체인 강제 불가**, OPERATOR가 `setKYCed=true` 기록 **이전에** OFAC+국적 필터링하는 **운영 정책으로 강제**(불변 정책·감사 항목화). v2 jurisdiction 필드는 신규 컨트랙트로 등재. |
-| **KYC 운영 파이프라인** (webhook→온체인 반영) | 없음(Sepolia 리허설만) | **[신규]** | ⚠️ ccm은 mainnet KYC 운영 무경험. webhook(HMAC 검증)→OFAC 스크리닝→`setKYCed` 큐. **온체인 반영 SLA 결정**(결정#11b): 전용 KYC_OPERATOR hot key 자동 batch(키 노출 trade-off) vs Safe 주기 batch(당일 참여 불가 고지). Sepolia→mainnet 승격 리허설을 게이트에 포함. |
-| **Hardhat/mocks/배포·verify** | `hardhat.config.ts`+`mocks/`+`deploy-*.ts` | **[재사용]** | MockUSDC(6dec)·ReentrantToken·MockPriceOracle 재사용. deploy/verify fork. ⚠️ `_dry-run-phase1.ts`는 **cap 4.99B 하드코딩·Token+Vesting만** → ASSA용(10B·KYCRegistry·Sale·핸드오프 풀시퀀스) **재작성**. |
+| **ASSAToken** (ERC20+Permit+Burnable+Capped+Pausable+Votes, 10B cap) | `CCMToken.sol` | **[Reuse+New] / Full Audit Scope** | (1) Cap 5B → `10_000_000_000e18`, **maintain ERC20Capped inheritance** (avoid manual require statements to prevent bypassing `_mint`). (2) **Add ERC20Votes** — extend the `_update` override to `(ERC20,ERC20Capped,ERC20Pausable,ERC20Votes)` + **new override** of `nonces()` in `(ERC20Permit,Nonces)` (currently missing). (3) name/symbol/Permit = 'ASSA WAVE'/'ASSA'. (4) **Determine burn model** (Decision #6b below): Maintain ERC20Burnable (BMEBurner burns its own balance) vs. New BURNER_ROLE gating. (5) **MINTER_ROLE Policy**: ccm grants it from admin → Sale/Vesting/Staking. ASSA will limit this to the TGE float stage and then transfer it to Phase 2 MiningRewards. Because the transfer hot-path changes, this requires a **new audit rather than a simple fork**. |
+| **TokenSale** (3-Round Fixed Price, USDC, Gating, TGE+Vesting) | `CCMTGESale.sol` | **[Reuse+New] / Rewrite Accounting** | (1) Fix 3-round prices to USDC equivalent of KRW 30/50/70. (2) ⚠️ **Rewrite `claimable`** — Current ccm is linear from `startTime`, which causes a cliff-jump and lacks a TGE immediate release portion. Adopt the spec §3.3 formula (`total*tgeBps/1e4 + (now>start+cliff?linearPostCliff:0) - claimed`) as the **single source of truth**, discarding ccm's `startTime`-based linearity. Linear vesting must start **from the end of the cliff** (`[start+cliff, start+duration]`). Prevent double-counting and underflow between the immediate and linear portions. (3) **Determine Gating** (Decision #3): Maintain per-round whitelist (no contract change = true reuse) vs. add `require(kyc.isKYCed(msg.sender))` to `purchase()` + inject immutable registry in the constructor (**new change · new audit surface**). (4) ⚠️ **New Pausable** (required by spec §3.2, absent in ccm): `purchase` is `whenNotPaused`, while claim/withdrawUSDC are exempted from pausing. (5) `withdrawUSDC` recipient = Treasury Safe. |
+| **TokenVesting** (Categorized Cliff+Linear, Revocable) | `CCMVesting.sol` | **[Reuse+New] / Rewrite Accounting** | (1) Add `tgeBps(uint16)` and `category(uint8)` to Schedule. (2) ⚠️ **Rewrite `releasable` similarly** (CCMVesting also has the `startTime`-based linearity flaw) — linear vesting starts after the cliff, add the TGE immediate portion, and enforce the invariants `claimed<=total` and `releasable>=0`. (3) Script deployment parameters: Founder 12m/48m · Team 12m/36m · Investor · Partner · ECO. |
+| **StakingLock (veASSA)** (Non-yield · Non-transferable · Time-decay) | `CCMStaking.sol` | **[New] / Virtual Rewrite** | ⚠️ Confirmed CCMStaking is yield-bearing. **Remove:** All paths for `priceOracle` · `R0_BPS` · `POOL_INIT` · `poolRemaining` · `rewardDebt` · `_harvest` · `pendingReward` · `currentYieldRateBps` · `recoverPoolRemainder` · `RewardClaimed`. **New:** Curve-style veToken `Lock{amount,start,end}`, `lock(amt,dur≤4y)` / `increaseAmount` / `increaseUnlockTime` / `withdraw` (principal only, after end) / lock consolidation accounting, linear decay `votingPower=amount*(end-now)/MAXTIME` + **checkpoints/history for historical querying**, **revert transfer/approve (strictly non-transferable)**. **Determine ERC5805 (votes) compatibility** (Decision #16). **Reuse skeleton:** imports · CEI · AccessControl/ReentrancyGuard/SafeERC20 only. **veToken checkpointing is a highly complex audit item** → Re-estimated as XL in §4. |
+| **BMEBurner** (USDC → ASSA Swap + Permanent Burn) | None (New) | **[New]** | `processRevenue(usdc,burnBps,minAssaOut)` → `safeTransferFrom` → DEX swap (`deadline`, `minAssaOut`) → `ASSA.burn`. **Caller must go through Safe/Timelock** (non-custodial alignment per §0-5, backend direct call prohibited). `minAssaOut` must be enforced as the **conservative value between on-chain TWAP AND/OR Chainlink** (keeper only configures `maxSlippageBps`, prohibiting push-only single source of truth). Burning = `address(0)` only. **Pre-dependency: ASSA/USDC mainnet pool creation + LP seeding** (see LP task below). |
+| **BME LP Bootstrap** (Mainnet Pool + LP) | `_dex-*.ts` (⚠️ **Base Sepolia / Uniswap V3 / Mock USDC only**) | **[New]** | ⚠️ `_dex-*` throws if `chainId!==84532n`. Mainnet Aerodrome (Decision #12) router/pool integration, ASSA/USDC pool creation, and initial LP seeding (specifying funding source and size) are **100% new** and constitute a **critical pre-requisite for BMEBurner deployment**. `_dex-*` is strictly for testnet smoke reference. Minimum liquidity threshold invariant (swap ≤ X% of the pool). |
+| **Treasury** (Sale USDC Recipient, Distribution Bucket) | `deploy-safe-3of4.ts` + `transfer-admin-to-timelock.ts` | **[Reuse+New]** | Uses **Gnosis Safe + Timelock** instead of a dedicated `Treasury.sol` (matching ccm pattern). ⚠️ ccm uses a **3-of-4 rehearsal / 3-of-5 mainnet target**. ASSA's 4-of-7 (Decision #9) requires **script parameterization [Reuse] + a 7-signer key ceremony/hardware distribution runbook [New]**. A new `Treasury.sol` will be created only if on-chain bucket accounting is required. |
+| **Timelock** (48h) | `CCMTimelock.sol` | **[Reuse As-Is]** | 48h `MIN_DELAY` floor, shortened only for 31337/1337. Renamed to ASSATimelock. Grant `UPGRADER_ROLE` if adopting UUPS evolution modules. |
+| **KYCRegistry** (Contract) | `CCMKYCRegistry.sol` | **[Reuse] / Operations Separated as New** | Single `isKYCed` bool. ⚠️ **Not deployed on mainnet (`0x0`)** — deployment is required prior to the sale. **No jurisdiction/expiry in the single bool** → US/CN and sanction blocking **cannot be enforced on-chain**. This must be **enforced through an operational policy** where the `OPERATOR` performs OFAC + nationality filtering **before** writing `setKYCed=true` (enforced as an invariant policy and audit item). The v2 jurisdiction field will be registered via a new contract. |
+| **KYC Operations Pipeline** (Webhook → On-chain reflection) | None (Sepolia Rehearsal Only) | **[New]** | ⚠️ ccm lacks experience in mainnet KYC operations. Webhook (HMAC verification) → OFAC screening → `setKYCed` queue. **Determine on-chain reflection SLA** (Decision #11b): automated batching via a dedicated `KYC_OPERATOR` hot key (key exposure trade-off) vs. periodic Safe batching (with notice that same-day participation is unavailable). Include the Sepolia → mainnet promotion rehearsal in the gate. |
+| **Hardhat/mocks/deploy · verify** | `hardhat.config.ts` + `mocks/` + `deploy-*.ts` | **[Reuse]** | Reuse `MockUSDC` (6dec) · `ReentrantToken` · `MockPriceOracle`. Fork deploy/verify. ⚠️ `_dry-run-phase1.ts` has a **4.99B cap hardcoded and covers Token+Vesting only** → **Rewrite** for ASSA (10B · KYCRegistry · Sale · full handoff sequence). |
 
-### 2.2 프런트 (Vite/React/wagmi)
+### 2.2 Frontend (Vite/React/wagmi)
 
-| ASSA 화면/모듈 | ccm 소스 | action | 핵심 변경점 |
+| ASSA Screen/Module | ccm Source | Action | Key Changes |
 |---|---|---|---|
-| **Landing (site)** | `frontend/`(App·sections/earth·Layout) | **[재사용]** | 라우트 셸·SEO/OG·i18n·법무·AllocationRing/VestingTimeline/EmissionCurve 재사용. 콘텐츠를 ASSA 내러티브로 교체. |
-| **dApp 셸 (portal)** | `portal/App.tsx`·Layout·lib | **[재사용]** | /sale·/app·/app/stake 재배치. Migrate 제거. |
-| **Token Sale (/sale)** | `Sale.tsx`(27KB, 거의 완성) | **[재사용+적응]** | N라운드 루프·진행바·**정확금액 approve(무한승인 회피)**·purchase·영수증·explorer 재사용. ABI를 ASSA로 교체, TGE bps 표시, KRW고정+USDC 병기, KYC 상태 가드. |
-| **Dashboard+Claim (/app)** | `Dashboard.tsx`+`Vesting.tsx` | **[재사용+적응]** | ⚠️ **베스팅 인덱싱 모델 확정 후**(결정#4): ccm·CCMVesting은 **id-indexed**(`scheduleIdsOf→id[]→releasable(id)`)이며 ASSA 스펙의 `releasable(address)`와 불일치. self-contained 유지 시 `claimable(roundId,addr)` 루프. 'address-indexed releasable' 문구는 모델 확정 후 일치시킴. |
-| **무이자 Staking (/app/stake)** | 없음(패턴만: Sale approve→write→receipt, EmissionCurve SVG) | **[신규]** | 금액+기간(≤4y)→approve→lock→veASSA 가중치/티어, increase*/withdraw. **'이자 없음' 오해방지 카피 상시**, 감쇠곡선. **정확금액 approve 강제**(NFR). |
-| **지갑·네트워크 가드** | `wagmi.ts`·env.ts(빌드타임 단일체인 핀)·WalletStatusBar | **[재사용]** | appName만 'ASSA WAVE'. 빌드타임 체인 핀(8453/84532)이 네트워크 혼동 방지 핵심. |
-| **SIWE 로그인+세션** | `siwe.ts`·useSession.ts + portal-api auth/session/me | **[재사용]** | ⚠️ **반피싱:** `ALLOWED_DOMAINS`를 `ccmnetwork.net`→assawave.io **정확 도메인 집합**으로 교체(와일드카드/유사도메인 배제 테스트), APP_STATEMENTS 다국어 문구 법무+보안 리뷰. KYC세션 엔드포인트 추가. |
-| **주소·ABI 동기** | `contracts.ts` + `wrangler.toml [vars]` | **[재사용]** | 하드코딩+IS_MAINNET 빌드핀(반피싱) 유지. 공유 abi 패키지를 단일 진실원천으로. |
-| **i18n KO/EN/JA** | `i18n.ts`+`locales/en.json` | **[재사용+적응]** | `['en']`→`['ko','en','ja']`, **ko 기본**. 3 네임스페이스 번역. |
-| **디자인 토큰·프리미티브** | `index.css`(CSS변수+@theme)·`primitives.tsx` | **[재사용+적응]** | CSS변수만 ASSA 브랜드(네이비+레드+골드, 골드는 액센트/보더 한정·WCAG AA 대비)로 스왑. primitives 코드 무변경. |
-| **반피싱·공식도메인 배너** | Sale.tsx env 배너 + SiteFooter + CopyableAddress | **[재사용]** | '공식: assawave.io' 상시 고지 + 주소 검증 표시. |
-| **BME 소각 대시보드** | `ValueAccrualLive.tsx`·`TVLLive` (라이브 지표 패턴) | **[재사용+적응]** | viem 읽기+주기 refetch 패턴 차용. **Worker eventIndexer(Burned 집계) + D1**. |
+| **Landing (site)** | `frontend/` (App · sections/earth · Layout) | **[Reuse]** | Reuse route shell · SEO/OG · i18n · legal copy · AllocationRing/VestingTimeline/EmissionCurve. Replace content with the ASSA narrative. |
+| **dApp Shell (portal)** | `portal/App.tsx` · Layout · lib | **[Reuse]** | Rearrange `/sale` · `/app` · `/app/stake`. Remove Migrate. |
+| **Token Sale (/sale)** | `Sale.tsx` (27KB, near complete) | **[Reuse+Adaptation]** | Reuse N-round loop · progress bars · **exact amount approval (avoiding infinite approval)** · purchase · receipts · explorer. Swap ABI for ASSA, display TGE bps, list KRW fixed price + USDC together, and guard with KYC status. |
+| **Dashboard+Claim (/app)** | `Dashboard.tsx` + `Vesting.tsx` | **[Reuse+Adaptation]** | ⚠️ **Post vesting indexing model confirmation** (Decision #4): ccm and `CCMVesting` are **id-indexed** (`scheduleIdsOf → id[] → releasable(id)`), which is inconsistent with the ASSA spec's `releasable(address)`. If maintaining a self-contained structure, loop over `claimable(roundId, addr)`. The 'address-indexed releasable' terminology will be aligned once the model is confirmed. |
+| **Non-yield Staking (/app/stake)** | None (Pattern only: Sale approve → write → receipt, EmissionCurve SVG) | **[New]** | Amount + duration (≤4y) → approve → lock → veASSA weight/tier, `increase*`/`withdraw`. **Enforce continuous 'no-yield' anti-misunderstanding copy** and display decay curve. **Force exact amount approval** (NFR). |
+| **Wallet/Network Guard** | `wagmi.ts` · `env.ts` (build-time single-chain pin) · `WalletStatusBar` | **[Reuse]** | Rename `appName` to 'ASSA WAVE'. The build-time chain pin (8453/84532) is critical to preventing network confusion. |
+| **SIWE Login + Session** | `siwe.ts` · `useSession.ts` + portal-api auth/session/me | **[Reuse]** | ⚠️ **Anti-phishing**: Replace `ALLOWED_DOMAINS` from `ccmnetwork.net` to the **exact set of domains** for `assawave.io` (test to exclude wildcards/homoglyphs), conduct legal + security review for multilingual `APP_STATEMENTS`. Add KYC session endpoint. |
+| **Address/ABI Sync** | `contracts.ts` + `wrangler.toml [vars]` | **[Reuse]** | Maintain hardcoding + `IS_MAINNET` build-pin (anti-phishing). Use the shared ABI package as the single source of truth. |
+| **i18n KO/EN/JA** | `i18n.ts` + `locales/en.json` | **[Reuse+Adaptation]** | `['en']` → `['ko','en','ja']`, with **ko as default**. Translate 3 namespaces. |
+| **Design Tokens & Primitives** | `index.css` (CSS variables + @theme) · `primitives.tsx` | **[Reuse+Adaptation]** | Swap CSS variables to match ASSA branding (Navy + Red + Gold; gold is limited to accents/borders, WCAG AA contrast). Primitives code remains unchanged. |
+| **Anti-Phishing/Official Domain Banner** | `Sale.tsx` env banner + `SiteFooter` + `CopyableAddress` | **[Reuse]** | Continuously display 'Official: assawave.io' banner + address verification indicators. |
+| **BME Burn Dashboard** | `ValueAccrualLive.tsx` · `TVLLive` (live metrics pattern) | **[Reuse+Adaptation]** | Adopt viem read + periodic refetch patterns. **Worker eventIndexer (Burned aggregation) + D1**. |
 
-### 2.3 백엔드 (Cloudflare Workers + D1)
+### 2.3 Backend (Cloudflare Workers + D1)
 
-| ASSA 엔드포인트/모듈 | ccm 소스 | action | 핵심 변경점 |
+| ASSA Endpoint/Module | ccm Source | Action | Key Changes |
 |---|---|---|---|
-| Hono 라우터+CORS | `index.ts` | **[재사용+적응]** | origin=assawave.io. /sale·/kyc·/portfolio·/webhooks 마운트. scheduled에서 carbon/sandbox/oracle 키퍼 제거. |
-| SIWE auth | `auth.ts` | **[재사용+적응]** | buildSiweMessage·verify 무변경. ⚠️ ALLOWED_DOMAINS를 assawave.io 정확집합으로. ALLOWED_CHAIN_IDS{8453,84532} 동일. |
-| 세션 HMAC | `session.ts` | **[그대로 재사용]** | 무변경. SIWE_SECRET만 신규. |
-| requireSession 미들웨어 | `middleware.ts` | **[그대로 재사용]** | 무변경. |
-| GET/PUT /me | `me.ts` | **[재사용+적응]** | VALID_LANGS에 ko(기본)/ja, 응답에 kyc_status 조인. |
-| 체인 직접읽기(view) | `chain.ts` | **[재사용+적응]** | ⚠️ ABI 재배선은 **베스팅 모델 확정 후**(결정#4). ERC20/KYC view 재사용. TokenSale getRound·StakingLock votingPower 리더 신규. **로그 인덱싱 아님(view만)**. |
-| view sync 잡 | `holders.ts` | **[재사용+적응]** | vesting/KYC/snapshot **view 폴링** sync + D1 upsert + sync_runs 재사용. ⚠️ **이벤트 로그 폴링 코드 없음** — 아래 eventIndexer 신규. |
-| **이벤트 인덱서** (getLogs+커서) | 없음 | **[신규] / L** | ⚠️ **ccm에 getLogs/blockCursor/sale_orders 전무.** 신규 `eventIndexer.ts`: viem `getLogs` + `fromBlock` 커서를 `sync_state` 테이블 영속 + 청크 윈도우 + **Worker subrequest/CPU 한도 회피용 다중 cron tick 백필** + 중복방지(`INSERT OR IGNORE`). **Purchased/Locked/Withdrawn/Burned 4개 이벤트** ABI·디코더. 데이터 정합성 최민감 컴포넌트. |
-| 이메일(Resend) | `email.ts` | **[그대로 재사용]** | sendEmail 무변경. 템플릿 ASSA·다국어. |
-| cron keeper | `scheduled.ts` | **[재사용+적응]** | ⚠️ **단일 `*/30` cron 분할**(아래 §2.4 cron 토폴로지). cliff/claim 알림 골격 유지, 오라클/샌드박스 제거. |
-| admin 게이트 | `admin.ts` | **[신규] / 격상** | ⚠️ **단일 공유 Bearer는 단일 실패점.** /sale/round-config·/allowlist·KYC 큐 같은 자금/규제 민감 작업 추가 전 **Safe 멤버 SIWE + audit 로그**로 격상(결정#14, Phase1 필수). 운영자별 토큰+회전. |
-| audit 로그 | `audit.ts`+`0003_admin_audit.sql` | **[그대로 재사용]** | VALID_ACTIONS에 create_round/whitelist_set/kyc_set 이미 포함. 민감 액션 강제 기록. |
-| KYC webhook | 없음 | **[신규]** | provider HMAC 검증 → OFAC 스크리닝 → kyc_status upsert → setKYCed 큐. webhook 본문 untrusted, 서명 필수. |
-| 온램프 세션 | 없음 | **[신규/선택]** | Phase 1 선택. Transak 위젯 세션 토큰만(자금 비경유). Phase 2 우선. |
-| wrangler/D1/CI | `wrangler.toml`+`migrations/`+`package.json` | **[재사용+적응]** | name=assawave-portal-api, 새 D1. vars=ASSA 주소·체인. environments(dev=84532/staging/prod=8453). |
+| Hono Router + CORS | `index.ts` | **[Reuse+Adaptation]** | origin = `assawave.io`. Mount `/sale`, `/kyc`, `/portfolio`, `/webhooks`. Remove carbon/sandbox/oracle keepers from `scheduled`. |
+| SIWE Auth | `auth.ts` | **[Reuse+Adaptation]** | `buildSiweMessage` · `verify` remain unchanged. ⚠️ Change `ALLOWED_DOMAINS` to the exact set of `assawave.io`. `ALLOWED_CHAIN_IDS` {8453, 84532} remains the same. |
+| Session HMAC | `session.ts` | **[Reuse As-Is]** | Unchanged. New `SIWE_SECRET` only. |
+| requireSession Middleware | `middleware.ts` | **[Reuse As-Is]** | Unchanged. |
+| GET/PUT /me | `me.ts` | **[Reuse+Adaptation]** | Add `ko` (default) / `ja` to `VALID_LANGS`, join `kyc_status` in response. |
+| Direct Chain Read (view) | `chain.ts` | **[Reuse+Adaptation]** | ⚠️ Rewire ABI **after vesting model confirmation** (Decision #4). Reuse ERC20/KYC view. New readers for `TokenSale.getRound` and `StakingLock.votingPower`. **Not log indexing (view only)**. |
+| view sync Job | `holders.ts` | **[Reuse+Adaptation]** | Reuse vesting/KYC/snapshot **view polling** sync + D1 upsert + `sync_runs`. ⚠️ **No event log polling code exists** — see new `eventIndexer` below. |
+| **Event Indexer** (getLogs + cursor) | None | **[New] / L** | ⚠️ **ccm completely lacks `getLogs`/`blockCursor`/`sale_orders`.** New `eventIndexer.ts`: viem `getLogs` + persist `fromBlock` cursor in `sync_state` table + chunk windows + **multiple cron tick backfills to avoid Worker subrequest/CPU limits** + deduplication (`INSERT OR IGNORE`). ABI & decoders for **4 events: Purchased/Locked/Withdrawn/Burned**. Highly sensitive component for data integrity. |
+| Email (Resend) | `email.ts` | **[Reuse As-Is]** | `sendEmail` remains unchanged. ASSA templates, multilingual. |
+| cron keeper | `scheduled.ts` | **[Reuse+Adaptation]** | ⚠️ **Split single `*/30` cron** (see §2.4 cron topology below). Retain cliff/claim notification skeleton; remove oracle/sandbox. |
+| admin Gate | `admin.ts` | **[New] / Upgrade** | ⚠️ **A single shared Bearer is a single point of failure.** Prior to adding capital/regulation sensitive tasks like `/sale/round-config`, `/allowlist`, or the KYC queue, upgrade to **Safe member SIWE + audit logs** (Decision #14, mandatory for Phase 1). Per-operator token + rotation. |
+| audit Log | `audit.ts` + `0003_admin_audit.sql` | **[Reuse As-Is]** | `VALID_ACTIONS` already includes `create_round`/`whitelist_set`/`kyc_set`. Force-record sensitive actions. |
+| KYC Webhook | None | **[New]** | Provider HMAC verification → OFAC screening → `kyc_status` upsert → `setKYCed` queue. Treat webhook payload as untrusted; signature verification is mandatory. |
+| On-ramp Session | None | **[New/Optional]** | Optional for Phase 1. Transak widget session token only (no funds passing through). Phase 2 takes priority. |
+| wrangler/D1/CI | `wrangler.toml` + `migrations/` + `package.json` | **[Reuse+Adaptation]** | `name=assawave-portal-api`, new D1. `vars` = ASSA addresses & chain. `environments` (dev = 84532 / staging / prod = 8453). |
 
-### 2.4 cron 토폴로지 (단일 `*/30` 분할 — 신규)
-ccm은 단일 `*/30` cron에 모든 키퍼를 직렬 await. ASSA는 sync+이벤트 인덱서+BME 가격푸시+알림 부하가 Worker CPU/subrequest 한도를 초과할 위험 → **작업별 분할**:
-- **view sync**(vesting/KYC/snapshot) `*/14`
-- **eventIndexer 백필**(Purchased/Locked/Withdrawn/Burned, blockCursor 증분 + per-tick 청크 상한) `*/7`
-- **BME 가격푸시 keeper**(가격 신선도 요구) `*/4`
-- **cliff/claim 알림** `hourly`
+### 2.4 Cron Topology (Splitting Single `*/30` — New)
 
-세일 활성 기간 로그량 급증 시 eventIndexer를 독립 Worker로 분리 가능하도록 설계.
+ccm performs serial `await` on all keepers under a single `*/30` cron. For ASSA, the sync + event indexer + BME price push + notification load risks exceeding Worker CPU/subrequest limits → **Split by task**:
+- **view sync** (vesting/KYC/snapshot) `*/14`
+- **eventIndexer backfill** (Purchased/Locked/Withdrawn/Burned, blockCursor increment + per-tick chunk cap) `*/7`
+- **BME price push keeper** (price freshness requirement) `*/4`
+- **cliff/claim notifications** `hourly`
 
----
-
-## 3. 소스 공유 전략 (재설계 — git 경계 반영)
-
-> ⚠️ **갭 정정:** 원안 옵션 C("web3/ 루트 단일 pnpm-workspace로 두 독립 repo 링크")는 **단일 `pnpm-workspace.yaml`이 단일 git repo를 전제**하므로 두 별도 원격(ccm·assawave)과 양립 불가(lockfile 소유권·node_modules 호이스팅 충돌). 서브모듈은 사용자 거부. 따라서 재설계한다.
-
-### 옵션 비교
-
-| 옵션 | 방식 | 장점 | 단점 | 평가 |
-|---|---|---|---|---|
-| **A(채택)** | 공통·안정 코드를 **별도 repo `assa-ccm-shared`(또는 ccm 내 publishable 패키지)** 로 추출, 두 repo가 **git 의존성/사설 레지스트리(npm)** 로 버전 핀 소비 | 명확한 버전 경계·git 경계 충돌 없음·두 repo 완전 독립 | 패키지 퍼블리시·버전 핀·CI 인증 오버헤드 | ✅ **채택** |
-| B | 단순 fork | 가장 빠름 | 주소·ABI·auth 드리프트(최대 리스크) | 단기만 |
-| C(폐기) | web3/ 루트 단일 workspace | — | **git 경계상 비현실적** | ✗ |
-| D(대안) | ccm·assawave를 **한 모노레포로 통합** | workspace 정상 동작 | 서브모듈 거부와 별개로 사용자 재확인 필요·repo 독립성 상실 | 사용자 결정시만 |
-
-### 채택(옵션 A) — 공유 패키지 대상 & 이관 순서
-- **chains/config** — Base 8453/84532 정의·RPC·주소 맵·IS_MAINNET 빌드핀
-- **ABI·주소 타입** — typechain 산출 ABI 타입(컨트랙트 빌드 산출물 = 단일 진실원천, **토큰 freeze 버전에 핀**)
-- **viem 헬퍼** — publicClient·readContract 래퍼(4앱+Worker 중복 제거)
-- **auth/session** — SIWE 빌더·세션 HMAC(`session.ts` 그대로)
-- **UI 프리미티브** — Card/CTA/Stat/Step + CSS 변수 토큰
-- **도메인 훅** — sale/vesting/staking 읽기 훅
-
-**이관 순서(빅뱅 금지, 각 단계 ccm 회귀 게이트):** ① `session.ts`+chains/config → ② viem 헬퍼·ABI 타입 → ③ UI 프리미티브 → ④ 도메인 훅.
-⚠️ **타이밍:** **M1부터 최소 추출**(chains/config·ABI·session)을 먼저 하고 M1 fork(WS2.3/WS3.1/WS3.2)가 **처음부터 공유 패키지를 import**하게 하여 retrofit/드리프트 회피. 도메인 훅·UI 프리미티브는 M2 단계화. ccm workspace 회귀 테스트는 크리티컬 패스와 **분리된 인력**에 배정.
+Designed to allow separating `eventIndexer` into an independent Worker in the event of log spikes during active sale periods.
 
 ---
 
-## 4. 워크스트림별 작업 분해
+## 3. Source Sharing Strategy (Redesign — Reflecting git Boundaries)
 
-규모: S(≤3일)·M(~1주)·L(~2주)·XL(>2주). 태그: [재사용]=fork/그대로, [재사용+신규]=구조 변경, [신규]=신규.
+> ⚠️ **Gap Correction:** The original Option C ("linking two independent repos via a single `pnpm-workspace.yaml` at the `web3/` root") is incompatible with two separate remote origins (ccm and assawave) because **a single `pnpm-workspace.yaml` assumes a single git repository** (colliding lockfile ownerships and node_modules hoisting conflicts). Submodules have been rejected by the user. Therefore, we redesign.
 
-### ① 컨트랙트
-| 태스크 | 태그 | 의존 | M | 규모 |
+### Option Comparison
+
+| Option | Method | Advantages | Disadvantages | Evaluation |
 |---|---|---|---|---|
-| WS1.1 Hardhat 부트스트랩(config·mocks·deploy·.env) | [재사용] | — | M1 | S |
-| WS1.2 ASSAToken: cap10B + ERC20Votes + `_update`(4-way)/`nonces` 신규 override + burn모델 확정 | [재사용+신규] | WS1.1 | M1 | M |
-| WS1.3 TokenVesting: tgeBps/category + **releasable 회계 재작성**(cliff후 선형·TGE분) + 스케줄 | [재사용+신규] | WS1.2 | M1 | L |
-| WS1.4 TokenSale: 3라운드 동결가 + **claimable 재작성** + 게이팅 결정 + **Pausable 신규** + Treasury 수령 | [재사용+신규] | WS1.3 | M2 | L |
-| **WS1.4b** KYCRegistry mainnet 배포(토큰 무의존, 1.2와 병렬) — 세일 전 선행 | [재사용] | WS1.1 | M2 | S |
-| WS1.5 StakingLock veASSA: 보상 전 경로 제거 + Lock/votingPower 선형감쇠 + **체크포인트/history** + 비전송 + ERC5805 결정 | [신규] | WS1.2 | M3 | **XL** |
-| WS1.6 BMEBurner: processRevenue+swap+burn+TWAP/Chainlink minAssaOut+Safe경유 호출 | [신규] | WS1.2, WS1.6b | M4 | L |
-| **WS1.6b** BME mainnet LP: Aerodrome 풀 생성+LP 시딩(자금 명시)+최소유동성 불변식 | [신규] | WS1.2 | M4 | M |
-| WS1.7 Treasury(Safe 4-of-7 파라미터화+키세리머니 런북)+Timelock(48h)+핸드오프(grant→renounce) | [재사용+신규] | WS1.2/3/4/4b | M2 | M |
+| **A (Adopted)** | Extract common/stable code into a **separate repository `assa-ccm-shared` (or a publishable package within ccm)**, consumed by both repos using a **git dependency or private npm registry** with version pinning. | Clear version boundaries · no git boundary conflicts · complete repo independence. | Package publishing · version pinning · CI authentication overhead. | ✅ **Adopted** |
+| B | Simple Fork | Fastest | Address, ABI, and auth drift (highest risk). | Short-term only |
+| C (Discarded) | Single workspace at `web3/` root | — | **Unrealistic due to git boundaries** | ✗ |
+| D (Alternative) | Consolidate ccm & assawave into **one monorepo** | Workspace operates correctly. | Requires user confirmation regardless of submodule rejection · loss of repo independence. | Only if decided by the user |
 
-### ② 프런트
-| 태스크 | 태그 | 의존 | M | 규모 |
-|---|---|---|---|---|
-| WS2.1 브랜딩 토큰 스왑(navy/red/gold, WCAG AA)+Wordmark | [재사용] | — | M1 | S |
-| WS2.2 Landing(site) fork + ASSA 콘텐츠 + 차트 + SEO/i18n | [재사용] | WS2.1 | M1 | M |
-| WS2.3 지갑·SIWE·네트워크가드·**반피싱 도메인 집합**·contracts/ABI 동기 | [재사용+적응] | WS2.1, WS5.1 | M1 | M |
-| WS2.4 Token Sale(/sale): ASSA ABI + 게이팅 + TGE bps | [재사용] | WS2.3, WS1.4 | M2 | M |
-| WS2.5 Dashboard(/app)+Claim+veASSA 요약 (**베스팅 모델 확정 후**) | [재사용] | WS2.4, 결정#4 | M2 | M |
-| WS2.6 무이자 Staking(/app/stake) 신규 UI+감쇠곡선+오해방지 카피+정확승인 | [신규] | WS2.5, WS1.5 | M3 | L |
-| WS2.7 BME 대시보드+반피싱+NFR(LCP<2.5s·WCAG AA·e2e Playwright) | [재사용] | WS2.4/5/6, WS4.5 | M3 | M |
+### Adopted (Option A) — Shared Package Scope & Migration Order
+- **chains/config** — Base 8453/84532 definitions · RPC · address maps · `IS_MAINNET` build-pin
+- **ABI & Address Types** — ABI types generated by typechain (contract build output = single source of truth, **pinned to token freeze version**)
+- **viem Helpers** — `publicClient` / `readContract` wrappers (deduplicates code across the 4 apps + Worker)
+- **auth/session** — SIWE builder · session HMAC (using `session.ts` as-is)
+- **UI Primitives** — Card / CTA / Stat / Step + CSS variable tokens
+- **Domain Hooks** — sale / vesting / staking read hooks
 
-### ③ 백엔드
-| 태스크 | 태그 | 의존 | M | 규모 |
-|---|---|---|---|---|
-| WS3.1 portal-api fork(SIWE/세션/me/middleware/db)+도메인 교체+0001 migration | [재사용] | WS5.1 | M1 | S |
-| WS3.2 chain.ts ABI 재배선(**베스팅 모델 확정 후**·Sale·StakingLock 리더) | [재사용+적응] | WS3.1, WS1.4, 결정#4 | M2 | M |
-| WS3.3 /sale/rounds·/sale/allowlist·/portfolio + 0002 migration | [재사용] | WS3.2 | M2 | M |
-| WS3.4 KYC webhook(HMAC)+OFAC 스크리닝+/kyc/session+지역차단(CF-IPCountry) | [신규] | WS3.1 | M1 | M |
-| WS3.5 BME keeper Worker(TWAP/Chainlink 가격, 독립 cron) | [신규] | WS1.6 | M4 | M |
-| **WS3.6** admin 콘솔 **Safe 멤버 SIWE 격상** + 민감액션 audit 강제 | [신규] | WS3.1 | M2 | M |
-
-### ④ 데이터/동기 (Worker+D1)
-| 태스크 | 태그 | 의존 | M | 규모 |
-|---|---|---|---|---|
-| WS4.1 holders.ts **view 폴링** sync fork(vesting/KYC/snapshot) ASSA 재배선 | [재사용] | WS3.2 | M2 | M |
-| **WS4.2 eventIndexer 신규**(getLogs+`sync_state` 커서+청크+중복방지) — Purchased/Locked/Withdrawn/Burned | [신규] | WS4.1 | M2 | **L** |
-| WS4.3 sale_orders/locks_cache/bme_burns D1 스키마 + 디코더 4종 | [신규] | WS4.2 | M2/M3 | M |
-| WS4.4 scheduled.ts cliff/claim 알림 fork(다국어) | [재사용] | WS4.1 | M2 | S |
-| WS4.5 cron 토폴로지 분할(§2.4) | [신규] | WS4.2 | M2 | S |
-
-### ⑤ 인프라·DevOps
-| 태스크 | 태그 | 의존 | M | 규모 |
-|---|---|---|---|---|
-| WS5.1 **공유 패키지 골격(옵션 A)** 최소 추출(chains/config·ABI·session) + git 의존성 배선 | [신규] | — | M1 | M |
-| WS5.2 wrangler environments(dev/staging/prod) vars·secrets + cron 토폴로지 | [재사용] | WS3.1 | M1 | S |
-| WS5.3 GitHub Actions: PR=typecheck+hardhat test+vitest, main=staging, tag=prod + d1 migrate | [재사용] | WS5.2 | M2 | S |
-| WS5.4 반피싱 인프라: 방어 도메인(.ai/.net) 등록·301 리다이렉트·DNSSEC + Basescan verify·주소 레지스트리·Defender/Tenderly·/health | [재사용+신규] | WS1.7 | M2/M4 | M |
-
-### ⑥ 보안·감사
-| 태스크 | 태그 | 의존 | M | 규모 |
-|---|---|---|---|---|
-| WS6.1 Slither+Solhint+coverage(≥95% 핵심) CI + mocks 이식 + 위협모델 문서 | [재사용] | WS1.1 | M1 | M |
-| WS6.2 **invariant/fuzz 신규**(Foundry forge 또는 hardhat+fast-check — **ccm에 없음**): totalSupply≤10B·mint호출자·sold≤cap·**claimed≤total+TGE/선형 경계**·veASSA 보상경로 부재(음성 불변식+ABI 정적검사)·**ERC20Capped+Votes+Pausable _update MRO**(cap초과 mint시 체크포인트 미기록·pause시 votingPower 불변) | [신규] | WS6.1 | M2 | L |
-| WS6.3 신규 3종(veASSA·BME·Votes) 자체검증 + Sale/Vesting 회계 검증 (델타 아님) | [재사용+신규] | WS1.4/5/6 | M2/M3 | L |
-| **WS6.4a 외부 감사#1**(Token+Votes·Sale·Vesting·KYCRegistry 배선) — 0 crit/high 게이트 | [신규] | WS6.2/6.3 | M2 | L |
-| **WS6.4b 외부 감사#2**(veASSA·BMEBurner) — 0 crit/high 게이트 | [신규] | WS1.5/1.6 | M3 | L |
-| WS6.5 Safe 4-of-7+48h Timelock 핸드오프 Sepolia 리허설(런북)+EOA renounce | [재사용] | WS6.4a | M2 | M |
-| WS6.6 Immunefi 바운티 vault 펀딩·런칭(mainnet 직후) | [재사용] | WS6.5 | M2 | S |
-
-> ⚠️ **WS6.2(fuzz)는 WS6.4a/b(외부 감사)의 명시적 선행 의존.** fuzz 없이 감사 진입 불가. ccm은 fuzz 툴링 0개이므로 Foundry/fast-check 도입은 순수 신규.
-
-### ⑦ 컴플라이언스
-| 태스크 | 태그 | 의존 | M | 규모 |
-|---|---|---|---|---|
-| WS7.1 KYC/AML 통합(KYCRegistry+Sumsub/Persona)·**OFAC+국적 setKYCed 사전필터 정책 코드화**·지역차단 US/CN(IP+지갑) | [재사용+신규] | WS3.4, WS1.4b | M2 | M |
-| **WS7.2 VAUPA/MAS/ADGM 법무 의견서·증권성 판단 — mainnet 세일 하드게이트** | [신규] | — | M2 | M |
-| WS7.3 약관/개인정보/쿠키 동의·무이자 카피 법무 리뷰 | [신규] | WS2.6 | M3 | S |
+**Migration Order (No big bang, regression gate for ccm at each stage):** ① `session.ts` + `chains/config` → ② viem helpers & ABI types → ③ UI primitives → ④ Domain hooks.
+⚠️ **Timing:** Extract the **minimal footprint from M1** (`chains/config`, ABI, session) first, ensuring that M1 forks (WS2.3 / WS3.1 / WS3.2) **import from the shared package from the beginning** to avoid retrofitting/drift. Transition domain hooks and UI primitives in M2. Allocate ccm workspace regression testing to **separate personnel** detached from the critical path.
 
 ---
 
-## 5. 의존성 그래프 & 크리티컬 패스
+## 4. Workstream Breakdown
+
+Sizes: S (≤ 3 days) · M (~1 week) · L (~2 weeks) · XL (> 2 weeks). Tags: [Reuse] = fork/as-is, [Reuse+New] = structural changes, [New] = new implementation.
+
+### ① Contracts
+
+| Task | Tag | Dependency | M | Size |
+|---|---|---|---|---|
+| WS1.1 Hardhat Bootstrap (config, mocks, deploy, .env) | [Reuse] | — | M1 | S |
+| WS1.2 ASSAToken: cap 10B + ERC20Votes + new `_update` (4-way)/`nonces` overrides + finalize burn model | [Reuse+New] | WS1.1 | M1 | M |
+| WS1.3 TokenVesting: `tgeBps`/`category` + **rewrite `releasable` accounting** (post-cliff linear + TGE portion) + schedule | [Reuse+New] | WS1.2 | M1 | L |
+| WS1.4 TokenSale: 3-round fixed price + **rewrite `claimable` accounting** + finalize gating + **new Pausable** + Treasury receipt | [Reuse+New] | WS1.3 | M2 | L |
+| **WS1.4b** KYCRegistry mainnet deployment (no token dependency, in parallel with 1.2) — pre-requisite for Sale | [Reuse] | WS1.1 | M2 | S |
+| WS1.5 StakingLock veASSA: remove all reward paths + Lock/`votingPower` linear decay + **checkpoints/history** + non-transferable + determine ERC5805 | [New] | WS1.2 | M3 | **XL** |
+| WS1.6 BMEBurner: `processRevenue` + swap + burn + TWAP/Chainlink `minAssaOut` + calling via Safe | [New] | WS1.2, WS1.6b | M4 | L |
+| **WS1.6b** BME mainnet LP: Aerodrome pool creation + LP seeding (specify funding) + minimum liquidity invariant | [New] | WS1.2 | M4 | M |
+| WS1.7 Treasury (Safe 4-of-7 parameterization + key ceremony runbook) + Timelock (48h) + Handoff (grant → renounce) | [Reuse+New] | WS1.2/3/4/4b | M2 | M |
+
+### ② Frontend
+
+| Task | Tag | Dependency | M | Size |
+|---|---|---|---|---|
+| WS2.1 Branding token swap (navy/red/gold, WCAG AA) + Wordmark | [Reuse] | — | M1 | S |
+| WS2.2 Landing (site) fork + ASSA content + charts + SEO/i18n | [Reuse] | WS2.1 | M1 | M |
+| WS2.3 Wallet · SIWE · network guard · **anti-phishing domains** · contracts/ABI synchronization | [Reuse+Adaptation] | WS2.1, WS5.1 | M1 | M |
+| WS2.4 Token Sale (/sale): ASSA ABI + gating + TGE bps | [Reuse] | WS2.3, WS1.4 | M2 | M |
+| WS2.5 Dashboard (/app) + Claim + veASSA summary (**post vesting model confirmation**) | [Reuse] | WS2.4, Decision #4 | M2 | M |
+| WS2.6 Non-yield Staking (/app/stake) new UI + decay curve + anti-misunderstanding copy + exact approval | [New] | WS2.5, WS1.5 | M3 | L |
+| WS2.7 BME dashboard + anti-phishing + NFR (LCP < 2.5s · WCAG AA · e2e Playwright) | [Reuse] | WS2.4/5/6, WS4.5 | M3 | M |
+
+### ③ Backend
+
+| Task | Tag | Dependency | M | Size |
+|---|---|---|---|---|
+| WS3.1 portal-api fork (SIWE / session / me / middleware / db) + domain replacement + `0001` migration | [Reuse] | WS5.1 | M1 | S |
+| WS3.2 `chain.ts` ABI rewiring (**post vesting model confirmation** · Sale · StakingLock readers) | [Reuse+Adaptation] | WS3.1, WS1.4, Decision #4 | M2 | M |
+| WS3.3 `/sale/rounds` · `/sale/allowlist` · `/portfolio` + `0002` migration | [Reuse] | WS3.2 | M2 | M |
+| WS3.4 KYC webhook (HMAC) + OFAC screening + `/kyc/session` + geo-blocking (CF-IPCountry) | [New] | WS3.1 | M1 | M |
+| WS3.5 BME keeper Worker (TWAP/Chainlink price, independent cron) | [New] | WS1.6 | M4 | M |
+| **WS3.6** admin console **upgrade to Safe member SIWE** + force audit logging for sensitive actions | [New] | WS3.1 | M2 | M |
+
+### ④ Data/Sync (Worker+D1)
+
+| Task | Tag | Dependency | M | Size |
+|---|---|---|---|---|
+| WS4.1 `holders.ts` **view polling** sync fork (vesting/KYC/snapshot) ASSA rewiring | [Reuse] | WS3.2 | M2 | M |
+| **WS4.2 new eventIndexer** (getLogs + `sync_state` cursor + chunking + deduplication) — Purchased/Locked/Withdrawn/Burned | [New] | WS4.1 | M2 | **L** |
+| WS4.3 `sale_orders` / `locks_cache` / `bme_burns` D1 schema + 4 decoders | [New] | WS4.2 | M2/M3 | M |
+| WS4.4 `scheduled.ts` cliff/claim notification fork (multilingual) | [Reuse] | WS4.1 | M2 | S |
+| WS4.5 Cron topology splitting (§2.4) | [New] | WS4.2 | M2 | S |
+
+### ⑤ Infrastructure & DevOps
+
+| Task | Tag | Dependency | M | Size |
+|---|---|---|---|---|
+| WS5.1 **Shared Package Skeleton (Option A)** minimal extraction (`chains/config` · ABI · session) + git dependency wiring | [New] | — | M1 | M |
+| WS5.2 wrangler environments (dev/staging/prod) vars & secrets + cron topology | [Reuse] | WS3.1 | M1 | S |
+| WS5.3 GitHub Actions: PR = typecheck + hardhat test + vitest, `main` = staging, `tag` = prod + D1 migrate | [Reuse] | WS5.2 | M2 | S |
+| WS5.4 Anti-phishing infra: defensive domains (.ai/.net) registration, 301 redirects, DNSSEC + Basescan verify, address registry, Defender/Tenderly, `/health` | [Reuse+New] | WS1.7 | M2/M4 | M |
+
+### ⑥ Security & Auditing
+
+| Task | Tag | Dependency | M | Size |
+|---|---|---|---|---|
+| WS6.1 Slither + Solhint + coverage (≥95% core) CI + mock porting + threat model document | [Reuse] | WS1.1 | M1 | M |
+| WS6.2 **New invariant/fuzz testing** (Foundry forge or hardhat+fast-check — **missing in ccm**): `totalSupply` ≤ 10B · `mint` caller authorization · `sold` ≤ cap · **`claimed` ≤ `total` + TGE/linear boundaries** · absence of veASSA reward paths (negative invariant + static ABI check) · **`ERC20Capped` + `Votes` + `Pausable` `_update` MRO** (no checkpoints recorded on mint exceeding cap · `votingPower` remains constant during pause) | [New] | WS6.1 | M2 | L |
+| WS6.3 In-house verification of the 3 new components (veASSA · BME · Votes) + Sale/Vesting accounting verification (not a delta) | [Reuse+New] | WS1.4/5/6 | M2/M3 | L |
+| **WS6.4a External Audit #1** (Token+Votes · Sale · Vesting · KYCRegistry integration) — 0 crit/high gate | [New] | WS6.2/6.3 | M2 | L |
+| **WS6.4b External Audit #2** (veASSA · BMEBurner) — 0 crit/high gate | [New] | WS1.5/1.6 | M3 | L |
+| WS6.5 Safe 4-of-7 + 48h Timelock handoff Sepolia rehearsal (runbook) + EOA renounce | [Reuse] | WS6.4a | M2 | M |
+| WS6.6 Immunefi bug bounty vault funding & launch (immediately post-mainnet) | [Reuse] | WS6.5 | M2 | S |
+
+> ⚠️ **WS6.2 (fuzz) is an explicit pre-requisite dependency for WS6.4a/b (external audit). Entering audits without fuzz testing is prohibited. Since ccm had 0 fuzz tooling, the introduction of Foundry/fast-check is 100% new.**
+
+### ⑦ Compliance
+
+| Task | Tag | Dependency | M | Size |
+|---|---|---|---|---|
+| WS7.1 KYC/AML integration (KYCRegistry + Sumsub/Persona) · **codify OFAC + nationality `setKYCed` pre-filter operational policies** · geo-blocking US/CN (IP + wallet) | [Reuse+New] | WS3.4, WS1.4b | M2 | M |
+| **WS7.2 VAUPA / MAS / ADGM Legal Opinion & Securities Determination — Mainnet Sale Hard Gate** | [New] | — | M2 | M |
+| WS7.3 Terms of service / privacy policy / cookie consent · legal review of no-yield copy | [New] | WS2.6 | M3 | S |
+
+---
+
+## 5. Dependency Graph & Critical Path
 
 ```
-WS5.1 공유패키지(chains/ABI/session 최소) ──> WS2.3 / WS3.1 / WS3.2 가 즉시 소비(retrofit 회피)
+WS5.1 Shared Package (Minimal chains/ABI/session) ──> Consumed immediately by WS2.3 / WS3.1 / WS3.2 (avoids retrofitting)
 
-WS1.1 Hardhat ──┬─> WS1.2 ASSAToken(Votes+10B+nonces) ──[코드 freeze=감사#1 입력]──┐
-                │        ├─> WS1.3 Vesting(회계 재작성) ──> WS1.4 Sale(회계+Pausable+게이팅) ─┤
-                │        ├─> WS1.5 veASSA(무이자 재작성+체크포인트) ─[XL, 감사#2 입력]──────────┤
-                │        └─> WS1.6b LP시딩 ─> WS1.6 BMEBurner ─[감사#2 입력]───────────────────┤
-                │   WS1.4b KYCRegistry(토큰무의존, 병렬) ──> WS1.4 게이팅 / WS1.7 핸드오프         │
-                └─> WS6.1 보안CI ─> WS6.2 fuzz(신규)══선행══> 감사                                │
-                                                                                                v
-   [펀딩 게이트] ASSAToken 배포 → deployer(EOA admin)가 세일/베스팅/veASSA 풀 전량 mint·전송
-                → createRound/createSchedule 구성 → 그 후에 transfer-admin-to-timelock 핸드오프
-                (핸드오프 후 재충전은 48h timelock mint 런북 — WS1.7 종료조건)
-                                                                                                v
-   WS6.2 ─> WS6.4a 감사#1(Token/Sale/Vesting/KYC) ══HARD GATE══╗
-   WS7.2 법무 GO 의견서 ════════════════════════════════════════╬══> mainnet 세일(M2)
-   WS6.5 핸드오프 리허설+EOA renounce + WS1.4b KYCRegistry mainnet ╝
+WS1.1 Hardhat ──┬─> WS1.2 ASSAToken (Votes+10B+nonces) ──[Code Freeze = Audit #1 Input]──┐
+                │        ├─> WS1.3 Vesting (Accounting Rewrite) ──> WS1.4 Sale (Accounting+Pausable+Gating) ─┤
+                │        ├─> WS1.5 veASSA (Non-yield Rewrite + Checkpoints) ──[XL, Audit #2 Input]──────────┤
+                │        └─> WS1.6b LP Seeding ──> WS1.6 BMEBurner ──[Audit #2 Input]───────────────────────┤
+                │   WS1.4b KYCRegistry (No token dependency, parallel) ──> WS1.4 Gating / WS1.7 Handoff     │
+                └─> WS6.1 Security CI ──> WS6.2 Fuzz (New) ══Pre-requisite══> Audit                          │
+                                                                                                            v
+   [Funding Gate] ASSAToken deployed → deployer (EOA admin) mints & transfers entire sale/vesting/veASSA pools
+                 → configure createRound/createSchedule → transfer-admin-to-timelock handoff afterward
+                 (post-handoff replenishment uses 48h timelock mint runbook — WS1.7 completion criteria)
+                                                                                                            v
+   WS6.2 ──> WS6.4a Audit #1 (Token/Sale/Vesting/KYC) ══HARD GATE══╗
+   WS7.2 Legal GO Opinion ═════════════════════════════════════════╬══> Mainnet Sale (M2)
+   WS6.5 Handoff Rehearsal + EOA Renounce + WS1.4b KYCRegistry Mainnet ╝
 
-   WS1.5 + WS1.6 ─> WS6.4b 감사#2 ══HARD GATE══> veASSA/BME mainnet 배포(M3)
+   WS1.5 + WS1.6 ──> WS6.4b Audit #2 ══HARD GATE══> veASSA/BME Mainnet Deployment (M3)
 
-   백엔드(WS3 SIWE 재사용)·Landing(WS2.2)은 ABI/주소+testnet 배포만으로 병렬(비크리티컬)
-   WS4.2 eventIndexer(신규)는 데이터 정합 크리티컬 — sale_orders/BME 대시보드의 선행
+   Backend (WS3 SIWE reuse) & Landing (WS2.2) are parallel (non-critical) using only ABI/address + testnet deployment
+   WS4.2 eventIndexer (New) is critical for data integrity — pre-requisite for sale_orders / BME dashboard
 ```
 
-### 순서 (크리티컬 패스)
-1. **WS5.1 공유패키지 최소 추출**(M1 fork가 처음부터 소비)
-2. **WS1.1 인프라 + WS1.2 ASSAToken**(Votes+10B, `_update`/`nonces` 컴파일 게이트) → **M1 토큰 코드 freeze**
-3. **WS1.3 Vesting ∥ WS1.4 Sale**(둘 다 회계 재작성) + **WS1.4b KYCRegistry**(병렬·세일 게이팅 선행)
-4. **WS1.5 veASSA(XL, 최장)** ∥ **WS1.6b LP → WS1.6 BME**
-5. **펀딩 게이트** → **WS1.7 핸드오프**(grant→renounce)
-6. **WS6.2 fuzz → WS6.4a 감사#1 ∥ WS7.2 법무 GO** — ⚠️ **mainnet 세일 하드 게이트(M2)**
-7. **WS6.5 핸드오프 리허설 + KYCRegistry mainnet** → **mainnet 배포 → 세일 개시(M2)**
-8. **WS6.4b 감사#2** → **veASSA/BME mainnet(M3)**
+### Order (Critical Path)
+1. **WS5.1 Shared Package Minimal Extraction** (consumed by M1 forks from the beginning)
+2. **WS1.1 Infrastructure + WS1.2 ASSAToken** (Votes+10B, `_update`/`nonces` compilation gates) → **M1 Token Code Freeze**
+3. **WS1.3 Vesting ∥ WS1.4 Sale** (both accounting rewrites) + **WS1.4b KYCRegistry** (parallel · sale gating pre-requisite)
+4. **WS1.5 veASSA** (XL, longest path) ∥ **WS1.6b LP → WS1.6 BME**
+5. **Funding Gate** → **WS1.7 Handoff** (grant → renounce)
+6. **WS6.2 Fuzz → WS6.4a Audit #1 ∥ WS7.2 Legal GO** — ⚠️ **Mainnet Sale Hard Gate (M2)**
+7. **WS6.5 Handoff Rehearsal + KYCRegistry Mainnet** → **Mainnet Deployment → Sale Launch (M2)**
+8. **WS6.4b Audit #2** → **veASSA/BME Mainnet (M3)**
 
-> **병렬 비크리티컬:** WS3(백엔드 SIWE 재사용)·WS2.2(Landing)·WS2.4(Sale UI)는 ABI/주소+testnet 배포만으로 동시 진행. WS4.2(eventIndexer)는 신규지만 데이터 정합 크리티컬. WS2.6/BME 대시보드는 WS1.5/1.6 종속(M3).
-
----
-
-## 6. 마일스톤 계획 (M1~M5)
-
-> **감사 정정:** ccm 코드베이스에 제3자 외부 감사 보고서 부재 → "델타 SOW/감사 승계" 폐기. **2개 풀스코프 감사**로 분리. ccm mainnet 라이브 ≠ 감사 통과.
-
-### M1 — 부트스트랩 & 재사용 코어
-- **산출물:** assawave repo 스캐폴드, **공유패키지 최소 추출(chains/ABI/session)**, ASSAToken(Votes+10B)·Vesting testnet 배포, Landing(브랜딩+KO/EN/JA), SIWE 인증(반피싱 도메인 집합), 보안 CI(Slither+coverage), KYC webhook 골격, wrangler env+cron 토폴로지.
-- **Exit Criteria:** ASSAToken/Vesting Base Sepolia 배포+verify, `_update`(4-way)/`nonces` override 정합 + **`totalSupply≤10B` 단위테스트** green, SIWE nonce→verify→세션 e2e green, **ASSAToken 코드 freeze(감사#1 입력)**·ABI를 공유패키지에 핀, Slither 0 high.
-- **DoD:** 4앱 빌드·배포 동작, M1 이후 토큰 변경 금지(변경=v2 절차).
-- **ccm 단축:** Token/Vesting/auth/session/wagmi/i18n/디자인토큰 fork. 신규=Votes override·브랜딩·반피싱 도메인.
-
-### M2 — 세일 풀스택 + 감사#1 + 법무 게이트 (mainnet 세일 런칭)
-- **산출물:** TokenSale(3라운드, **claimable 재작성·Pausable**)·Sale UI·/sale/rounds·/portfolio·**eventIndexer(Purchased)**·KYC webhook(OFAC)·admin SIWE 격상·Safe/Timelock/**KYCRegistry mainnet** 배포, **외부 감사#1 완료**, **법무 GO 의견서**, 공유패키지 도메인 훅 단계화.
-- **Exit Criteria:** ⚠️ **(A) 감사#1 0 crit/high + medium 전부 mitigated**, **(B) VAUPA/증권성 법무 GO 의견서 수령**(없이는 createRound/withdrawUSDC 금지), (C) Safe 4-of-7+48h 핸드오프 Sepolia 리허설+EOA renounce, (D) KYCRegistry mainnet 배포+OFAC 사전필터 정책 적용, (E) **세일 전체 라운드 물량 핸드오프 이전 사전 펀딩 완료**, (F) **KYC 승인→온체인 반영 SLA** 명시, (G) Immunefi vault 펀딩.
-- **DoD:** Base Sepolia **세일→게이트→TGE 즉시언락→cliff→선형 claim→USDC를 Treasury Safe 수령** 풀시퀀스 E2E(재작성한 dry-run) 통과, mainnet 첫 라운드 오픈.
-- **ccm 단축:** Sale.tsx(27KB)·view sync·핸드오프 런북 재사용. 신규=claimable 회계·Pausable·eventIndexer·감사 리드타임.
-
-### M3 — 무이자 Staking + BME 출시 + 감사#2
-- **산출물:** StakingLock veASSA(mainnet)·/app/stake UI(감쇠곡선·오해방지 카피)·BMEBurner+LP(mainnet)·BME 대시보드·다국어 마감·컴플라이언스 카피.
-- **Exit Criteria:** ⚠️ **감사#2 0 crit/high**(veASSA·BME), veASSA "보상 분배 함수 부재" 음성 불변식+ABI 정적검사 통과, 토큰잔액==lock원금합(잉여유출 0), BME swap+burn fork test(Base) 통과·최소유동성 불변식, BME 대시보드 체인↔캐시 정합, 무이자 카피 법무 승인.
-- **DoD:** lock→votingPower 감쇠→withdraw E2E, BME processRevenue→소각 mainnet 검증.
-- **ccm 단축:** Sale approve→write→receipt 패턴·EmissionCurve SVG·라이브 지표·keeper 패턴 차용. veASSA(XL)/BME 로직 신규.
-
-### M4 (개요) — Phase 2 팬 이코노미
-ConsumptionEngine, StarRanking/FandomBattle, EdgeNode+MiningRewards, ERC-1155 NFT. 전부 신규, 감사 대규모. eventIndexer 부하 급증 시 Ponder/Graph 재평가.
-
-### M5 (개요) — Phase 3 거버넌스·L3
-ASSAGovernor+Timelock(votes 소스 단일화 결정 §8-16 반영), PredictionMarket(VRF), DebutFundingDAO, L3(OP Stack).
+> **Parallel Non-critical Path:** WS3 (backend SIWE reuse) · WS2.2 (Landing) · WS2.4 (Sale UI) progress simultaneously using only ABI/address + testnet deployment. WS4.2 (eventIndexer) is new but critical for data integrity. WS2.6/BME dashboard depends on WS1.5/1.6 (M3).
 
 ---
 
-## 7. 리스크 레지스터
+## 6. Milestone Plan (M1 ~ M5)
 
-| 리스크 | 영향 | 가능성 | 완화 |
+> **Audit Correction:** Absence of a third-party external audit report in the ccm codebase → Discard "delta SOW / audit inheritance". Split into **2 full-scope audits**. ccm mainnet live does not equal audit approved.
+
+### M1 — Bootstrap & Reused Core
+- **Deliverables:** assawave repo scaffolding, **shared package minimal extraction (chains/ABI/session)**, ASSAToken (Votes+10B) · Vesting testnet deployment, Landing (branding + KO/EN/JA), SIWE authentication (anti-phishing domain set), security CI (Slither+coverage), KYC webhook skeleton, wrangler env + cron topology.
+- **Exit Criteria:** ASSAToken/Vesting Base Sepolia deployment + verify, `_update` (4-way)/`nonces` override alignment + **`totalSupply ≤ 10B` unit test** green, SIWE `nonce` → `verify` → session e2e green, **ASSAToken Code Freeze (Audit #1 Input)** · pin ABI to shared package, Slither 0 high.
+- **DoD:** 4 apps build & deploy operational, no changes to token after M1 (change = v2 process).
+- **ccm Savings:** Fork Token/Vesting/auth/session/wagmi/i18n/design tokens. New = Votes override · branding · anti-phishing domains.
+
+### M2 — Sale Full Stack + Audit #1 + Legal Gate (Mainnet Sale Launch)
+- **Deliverables:** TokenSale (3 rounds, **rewritten `claimable` · Pausable**) · Sale UI · `/sale/rounds` · `/portfolio` · **eventIndexer (Purchased)** · KYC webhook (OFAC) · admin SIWE upgrade · Safe/Timelock/**KYCRegistry mainnet** deployment, **completion of External Audit #1**, **Legal GO Opinion**, phased integration of shared package domain hooks.
+- **Exit Criteria:** ⚠️ **(A) Audit #1 0 crit/high + all mediums mitigated**, **(B) Acquisition of VAUPA/securities Legal GO Opinion** (without which `createRound`/`withdrawUSDC` are prohibited), (C) Safe 4-of-7 + 48h handoff Sepolia rehearsal + EOA renounce, (D) KYCRegistry mainnet deployed + OFAC pre-filter policies enforced, (E) **pre-funding of all sale round allocations completed prior to handoff**, (F) **KYC approval → on-chain reflection SLA** specified, (G) Immunefi vault funded.
+- **DoD:** Base Sepolia **Sale → Gate → TGE Immediate Unlock → Cliff → Linear Claim → USDC received in Treasury Safe** full sequence E2E (rewritten dry-run) passes; mainnet first round opens.
+- **ccm Savings:** Reuse `Sale.tsx` (27KB) · view sync · handoff runbooks. New = `claimable` accounting · Pausable · `eventIndexer` · audit lead time.
+
+### M3 — Non-yield Staking + BME Launch + Audit #2
+- **Deliverables:** StakingLock veASSA (mainnet) · `/app/stake` UI (decay curve · anti-misunderstanding copy) · BMEBurner + LP (mainnet) · BME dashboard · final multilingual assets · compliance copy.
+- **Exit Criteria:** ⚠️ **Audit #2 0 crit/high** (veASSA · BME), veASSA "absence of reward distribution function" negative invariant + static ABI check passes, token balance == sum of lock principals (0 excess outflow), BME swap+burn fork test (Base) passes · minimum liquidity invariant, BME dashboard chain ↔ cache consistency, legal approval of non-yield copy.
+- **DoD:** lock → `votingPower` decay → withdraw E2E, `BME` `processRevenue` → burn mainnet verification.
+- **ccm Savings:** Borrow Sale approve → write → receipt patterns · EmissionCurve SVG · live metrics · keeper patterns. New = veASSA (XL) / BME logics.
+
+### M4 (Outline) — Phase 2 Fan Economy
+ConsumptionEngine, StarRanking/FandomBattle, EdgeNode+MiningRewards, ERC-1155 NFT. Entirely new, massive audit scope. If eventIndexer load spikes, re-evaluate Ponder/The Graph.
+
+### M5 (Outline) — Phase 3 Governance & L3
+ASSAGovernor + Timelock (reflecting votes single source of truth Decision §8-16), PredictionMarket (VRF), DebutFundingDAO, L3 (OP Stack).
+
+---
+
+## 7. Risk Register
+
+| Risk | Impact | Probability | Mitigation |
 |---|---|---|---|
-| **이벤트 인덱서 신규 부재 과소평가**(ccm getLogs 코드 0) | 높음(데이터 정합) | 높음 | WS4.2를 [신규]/L로 등재, `sync_state` 커서·다중 cron 백필·중복방지, subrequest/CPU 한도 설계 |
-| **세일/베스팅 회계 재작성 버그**(startTime-선형 결함·TGE 이중계상·언더플로) | 높음(자금 과다/과소지급) | 중 | 스펙 §3.3 공식 단일소스, cliff후 선형, 경계 fuzz(t=start/start+cliff/start+duration), claimed≤total 불변식 |
-| **감사 baseline 부재**(델타 SOW 불성립) | 높음(범위·일정) | 높음 | 2개 풀스코프 감사, 4-8주 전 예약, fuzz 선행 게이트 |
-| **법무 미승인 세일 강행**(VAUPA·증권성) | 높음(불법) | 중 | WS7.2 법무 GO를 M2 하드게이트로, 온체인 isKYCed 최종 게이트 |
-| **veASSA 무이자 재작성 + 체크포인트**(이자형 잔재·감쇠 정밀도·veToken 감사난이도) | 높음(가치유출) | 중 | XL 재산정, 음성 불변식+ABI 정적검사, Curve/Velodrome 레퍼런스 대조, 감사#2, ReentrantToken 재진입 |
-| **BME DEX/MEV/유동성**(샌드위치·풀 부족·keeper키 탈취) | 높음(직접손실) | 중 | TWAP+Chainlink 보수값, keeper는 maxSlippageBps만, LP 시딩 선행+최소유동성 불변식, Flashbots Protect, Safe 경유 호출 |
-| **mainnet KYC 운영 미검증**(Sepolia 리허설만·webhook 위조·Safe 서명 지연) | 높음 | 높음 | webhook HMAC, OFAC 사전필터, 승격 리허설, 온체인 반영 SLA(hot key vs Safe batch) |
-| **펀딩↔핸드오프 순서 모순**(MINTER 회수 후 세일 펀딩 48h 갇힘) | 높음(운영 마비) | 중 | 펀딩 게이트 명시(전량 mint→구성→핸드오프), 재충전 48h timelock 런북 |
-| **공유패키지 git 경계**(단일 workspace 충돌) | 중 | 중 | 옵션 A(별도 패키지+git 의존성), C 폐기 |
-| **admin 단일 Bearer 단일점**(round 조작·무단 화이트리스트) | 중 | 중 | Safe 멤버 SIWE 격상, 가격 동결 온체인 강제, audit 강제 |
-| **ERC20Capped+Votes+Pausable _update MRO** | 중 | 중 | 컴파일 게이트 아닌 런타임 불변식(cap초과 mint시 체크포인트 미기록·pause시 votingPower 불변) |
-| **ASSAToken Votes vs veASSA votes 이중계표** | 중 | 중 | Phase1 votes 소스 단일화(§8-16): 토큰 votes dormant 또는 veASSA만, 비전송 강제 |
-| **세일 Pausable 부재**(긴급정지 불가) | 중 | 중 | purchase whenNotPaused 신규, claim/withdraw 정지 예외 |
+| **Underestimating new event indexer scope** (0 `getLogs` code in ccm) | High (Data Integrity) | High | Classify WS4.2 as [New]/L; implement `sync_state` cursors, multiple cron backfills, deduplication, and design for Worker subrequest/CPU limits. |
+| **Bugs in Sale/Vesting accounting rewrite** (ccm `startTime`-based linearity flaw, TGE double-counting, underflow) | High (Over/Under-disbursement) | Medium | Spec §3.3 formula as single source of truth; linear vesting starts post-cliff; boundary fuzzing (`t = start / start+cliff / start+duration`); enforce `claimed ≤ total` invariant. |
+| **Absence of audit baseline** (delta SOW invalid) | High (Scope/Schedule) | High | Contract 2 full-scope audits; reserve slots 4–8 weeks in advance; establish fuzzing as a mandatory pre-requisite gate. |
+| **Launching sale without legal approval** (VAUPA, securities) | High (Illegal) | Medium | Establish WS7.2 Legal GO as M2 hard gate; enforce on-chain `isKYCed` as final gate. |
+| **veASSA non-yield rewrite + checkpoints** (residual yield mechanics, decay precision, high veToken audit difficulty) | High (Value Outflow) | Medium | Re-estimate scope as XL; enforce negative invariants + static ABI checks; cross-reference Curve/Velodrome implementations; execute Audit #2; test with `ReentrantToken` re-entry. |
+| **BME DEX/MEV/Liquidity risks** (sandwiching, insufficient pool depth, keeper key theft) | High (Direct Losses) | Medium | Enforce conservative pricing using TWAP + Chainlink; keeper only configures `maxSlippageBps`; mandate LP seeding first + minimum liquidity invariant; leverage Flashbots Protect; call exclusively via Safe. |
+| **Unverified mainnet KYC operations** (Sepolia rehearsal only, webhook forgery, Safe signing delays) | High | High | Validate webhooks via HMAC; apply OFAC pre-filters; conduct promotion rehearsals; define on-chain reflection SLA (hot key vs. Safe batching). |
+| **Funding ↔ Handoff sequencing conflict** (Sale funding locked for 48h if `MINTER` is revoked first) | High (Operational Freeze) | Medium | Explicitly define the Funding Gate (mint entire supply → configure rounds/schedules → execute handoff); compile a 48h timelock mint runbook for replenishments. |
+| **Shared package git boundaries** (single workspace conflict) | Medium | Medium | Implement Option A (separate package + git dependency); discard Option C. |
+| **Single Bearer token on admin panel as single point of failure** (round tampering, unauthorized whitelisting) | Medium | Medium | Upgrade to Safe member SIWE; enforce price freeze on-chain; mandate audit logging. |
+| **`ERC20Capped` + `Votes` + `Pausable` `_update` MRO** | Medium | Medium | Establish runtime invariants rather than compile gates (no checkpoints written on mint exceeding cap · `votingPower` remains constant during pause). |
+| **Double-voting between `ASSAToken` votes and `veASSA` votes** | Medium | Medium | Single source of truth for votes in Phase 1 (§8-16): keep token votes dormant or use veASSA only; enforce non-transferability. |
+| **Lack of `Pausable` in Sale** (incapable of emergency stop) | Medium | Medium | Add `whenNotPaused` to `purchase`; exempt claim/withdraw from pause. |
 
 ---
 
-## 8. 결정 필요 사항 (⚠️ 사용자 승인) — **[권고]** 포함
+## 8. Decisions Required (⚠️ User Approval) — Including **[Recommendations]**
 
-1. **스택 override** — [승인] Foundry/Next14/NestJS/Ponder 폐기, ccm 실제 스택 확정.
-2. **인덱서** — [Worker view 폴링 + **신규 eventIndexer**] 별도 Ponder/Graph 불필요(Phase1). ⚠️ 이벤트 로그 인덱싱은 ccm에 없어 신규 구축.
-3. **세일 게이팅** — ✅ **확정(2026-05-30): per-round whitelist 유지** (ccm `whitelist[round][addr]` boolean 무변경 = 진짜 재사용·감사표면 0). KYCRegistry는 프런트/백엔드 게이팅 + 온체인 진실원천으로 **병용**. 대안 폐기: `purchase`에 `isKYCed` 주입(컨트랙트 변경·신규 감사표면·KYCRegistry mainnet 선행).
-4. **세일 베스팅 모델** — ✅ **확정(2026-05-30): CCMTGESale/CCMVesting self-contained id-indexed 유지** (`claimable(roundId, addr)` 루프, chain.ts/UI도 id 기반 인덱싱). TGE/cliff 회계는 스펙 §3.3 공식으로 재작성(WS1.3/1.4, 별도). 대안 폐기: `releasable(address)` 단일집계 재설계. → **WS3.2/WS2.5 착수 차단 해제.**
-5. **소스 공유** — [**옵션 A**(별도 패키지+git 의존성) 권고] C(단일 workspace) 폐기·서브모듈 거부. D(모노레포 통합)는 사용자 결정 시.
-6. **ASSAToken ERC20Votes** — [Phase1부터 포함 권고] Phase3 거버넌스 전제. _update/nonces 복잡도·감사범위 증가.
-6b. **burn 모델** — [**ERC20Burnable 유지 권고**(BMEBurner가 자기 잔액 burn, EOA burn 무해)] vs BURNER_ROLE 게이트(스펙 'EOA burn 금지' 준수·감사표면↑). WS1.6 인터페이스의 선행.
-7. **StakingLock 무이자 확정** — [확정] 보상/emission/oracle 전 경로 제거, 음성 불변식 강제.
-8. **토큰 업그레이드성** — [코어 불변 권고] Token/Sale/Vesting non-upgradeable. UUPS는 Phase2 진화모듈만.
-9. **Safe 구성** — [**4-of-7 권고**] ccm 3-of-4 스크립트 파라미터화[재사용] + 7-서명자 키 세리머니[신규]. 서명자 7명 확보 가능성 확인.
-10. **결제 통화** — [USDC 단독] KRW 고정→USDC 동결 표시. 온램프는 Phase 2.
-11. **KYC 공급자·지역차단** — [provider 추상화 후 1곳] Sumsub vs Persona, US/CN IP+지갑.
-11b. **KYC 온체인 반영 SLA** — [**세일 전 사전심사+Safe batch 권고**(당일 참여 불가 고지)] vs 전용 hot key 자동 batch(키 노출 trade-off).
-12. **BME DEX·가격소스** — [Aerodrome + TWAP/Chainlink 보수값] ASSA/USDC LP 시딩 규모·자금 출처 확정.
-13. **감사 SOW·바운티** — [**2개 풀스코프**(감사#1=Token/Sale/Vesting/KYC@M2, 감사#2=veASSA/BME@M3), 델타 폐기, 슬롯 조기 예약, Immunefi mainnet 직후].
-14. **admin 콘솔 인증** — [**Safe 멤버 SIWE 격상 권고**, Phase1 필수] 공유 Bearer 단일점 회피.
-15. **브랜드 계승 (실측 BI 기준 정정)** — [**Red #EF2525 primary + 화이트 + 다크 잉크 캔버스 + 골드 액센트** 확정] ⚠️ 기존 "네이비+레드+골드"는 덱 유래 가정이었고, **실측 BI(`docs/assa-bi/`)에는 레드+화이트만 존재**(네이비·골드 없음). 역할 재조정: 레드=브랜드/CTA, **navy=dApp 다크 캔버스**, **gold=면·보더·티어 배지 한정(텍스트 금지)**, 데이터 시각화=중립 `--data-*`(레드 금지). **WCAG 실측:** 흰 글자 on #EF2525 = **4.23:1 FAIL** → **Primary 배경=#C81E14(brand-pressed)** 로 확정. 레드 3계열(#EF2525/#D93A26/#DC2626) **ΔE 분리**(브랜드 vs 진행 vs 위험). **BI 마스터=굵은 워드마크(logo01.png)**, ▶+wave 심볼=마크(OG/favicon). 폰트=Righteous+Poppins+Chakra Petch+Pretendard(KO)/Noto JP. ⚠️ ccm 재사용은 '색 변수 스왑'이 아니라 **`--moss`(단일 accent, 237회 혼용) 의미 분기 audit** 동반(브랜드/데이터/positive). 상세: `ASSA_WAVE_SITE_DESIGN.md` §1·§1.0a·§6. WS2.1을 'audit 기반 의미 분기'로 격상.
-16. **votes 소스 단일화** — [**Phase1 토큰 votes dormant, 거버넌스는 veASSA만**(Phase3) 권고] 이중계표 방지. veASSA transfer revert(비전송)·ERC5805 호환 시점 결정.
-17. **세일 Pausable** — [purchase whenNotPaused 추가, claim/withdraw 정지 예외 권고] 스펙 §3.2 요구.
-18. **테스트넷 키 분리 정책** — [**프로젝트별 키 분리 권고**] ccm 테스트넷 키(`.phase2-rehearsal-keys.json`·`.carbon-oracle-keeper.json`)는 `.gitignore` 처리된 "throwaway·Sepolia 전용" 일회용 지갑이라 재사용해도 무가치하나, assawave **전용 deployer/keeper/admin 키를 신규 생성** 권장. 근거: 같은 체인(Base Sepolia `84532`)에서 컨트랙트 주소가 `(deployer, nonce)`로 결정되어 공유 시 nonce 뒤섞임 → **assawave 테스트넷 주소 재현 불가·레지스트리 혼선**, 그리고 blast radius 축소·감사추적 분리·메인넷 키 규율 사전 정착. **재사용 대상은 키가 아니라 설정/툴링** — Sepolia RPC(`sepolia.base.org`)·chainId `84532`·faucet·deploy/keeper 스크립트(`_*-keeper-*.ts`)·wrangler 구조·KYCRegistry 리허설 *패턴*(단 assawave는 자체 배포, ccm의 `0x9172…`를 가리키지 말 것). **하드 룰:** ① 테스트넷 키 ≠ 메인넷 키(절대) ② ccm `.env`/키 json을 assawave로 **복사 금지**(시크릿 sprawl) — 패턴만 참조, 키는 새로 생성 ③ mainnet Safe 서명자·deployer는 전용 하드웨어 키, 어떤 것과도 공유 금지. 예외: 개인 dev/QA 지갑(MetaMask로 Sepolia UI 클릭 테스트)은 양 프로젝트 공용 무해. *(관련: #9 Safe 구성·#11b KYC 온체인 반영 SLA. 키 생성·입력은 보안상 사용자가 직접 수행.)*
-
----
-
-## 9. 즉시 착수 (첫 스프린트, 1~2주)
-
-**공유 패키지 골격 (옵션 A — 최소 추출 먼저)**
-- [ ] 공유 패키지 repo(`assa-ccm-shared` 또는 ccm 내 publishable) 스캐폴드 + 두 repo git 의존성 배선
-- [ ] `session.ts` + chains/config(Base 8453/84532·RPC·주소 맵 stub) 1차 이관, **ccm 회귀 테스트 green** 확인
-
-**온체인 (크리티컬 패스 시작)**
-- [ ] `ccm/onchain` → `assawave/onchain` 복제: `hardhat.config.ts`(0.8.24 cancun·optimizer 200·Base/Sepolia·Basescan v2 verify)·`mocks/`·`.env` 템플릿
-- [ ] **ASSAToken**: CCMToken fork → ERC20Votes 상속 → `_update` override `(ERC20,Capped,Pausable,Votes)` + `nonces()`(`ERC20Permit,Nonces`) 신규 → cap 5B→10B(**ERC20Capped 유지**) → name/symbol 'ASSA' → **burn 모델 확정**(결정#6b) → 컴파일·`totalSupply≤10B`·`_update` MRO 단위테스트
-- [ ] **fuzz 툴링 신규 도입**(Foundry forge 또는 hardhat+fast-check — ccm에 없음) 부트스트랩
-- [ ] Base Sepolia 배포 + verify + 주소 레지스트리 JSON 초기화
-
-**디자인시스템 (병렬)**
-- [ ] `frontend` 토큰 fork → `index.css` CSS변수 navy/red/gold 스왑(WCAG AA, 골드 액센트 한정) + ASSA Wordmark
-- [ ] primitives.tsx 무변경 동작 확인
-
-**백엔드 (병렬)**
-- [ ] `portal-api` fork(index/auth/session/middleware/db/me/email) → 도메인 assawave.io, **ALLOWED_DOMAINS 정확집합** → 신규 시크릿
-- [ ] 신규 D1 + `0001_init` + **`sync_state`(이벤트 커서) 스키마** → nonce→verify→세션쿠키 vitest e2e green
-
-**인프라/CI**
-- [ ] `wrangler.toml` fork: name·D1·vars(ASSA stub·dev=84532) + environments + **cron 토폴로지 분할 골격**
-- [ ] GitHub Actions: PR=typecheck+hardhat test+vitest + Slither+Solhint+coverage 게이트
-- [ ] **감사사 2-3곳 슬롯 사전 문의**(감사#1/#2 분리 SOW) + **법무(VAUPA/증권성) 킥오프**(M2 하드게이트)
-- [ ] 방어 도메인(.ai/.net) 등록·DNSSEC 착수
+1. **Stack Override** — [Approval] Discard Foundry/Next14/NestJS/Ponder, finalize ccm actual stack.
+2. **Indexer** — [Worker view polling + **New eventIndexer**] Separate Ponder/Graph unnecessary for Phase 1. ⚠️ Event log indexing is missing in ccm and must be built anew.
+3. **Sale Gating** — ✅ **Confirmed (2026-05-30): Maintain per-round whitelist** (ccm `whitelist[round][addr]` boolean unchanged = true reuse · 0 new audit surface). KYCRegistry will be **used in tandem** for frontend/backend gating + on-chain source of truth. Discard alternative: injecting `isKYCed` into `purchase` (contract change · new audit surface · KYCRegistry mainnet dependency).
+4. **Sale Vesting Model** — ✅ **Confirmed (2026-05-30): Maintain CCMTGESale/CCMVesting self-contained id-indexing** (loop over `claimable(roundId, addr)`, chain.ts/UI also id-indexed). TGE/cliff accounting will be rewritten using the spec §3.3 formula (WS1.3/1.4, separate). Discard alternative: redesigning for a single aggregated `releasable(address)`. → **WS3.2/WS2.5 blocking is cleared.**
+5. **Source Sharing** — [**Option A (separate package + git dependency) Recommended**] Option C (single workspace) discarded; submodules rejected. Option D (monorepo integration) is open if decided by user.
+6. **ASSAToken ERC20Votes** — [Phase 1 Inclusion Recommended] Pre-requisite for Phase 3 governance. Increases `_update`/`nonces` complexity and audit scope.
+6b. **Burn Model** — [**Maintaining ERC20Burnable Recommended** (BMEBurner burns its own balance; EOA burning is harmless)] vs. `BURNER_ROLE` gate (respects spec's 'prohibit EOA burning', increases audit surface). Pre-requisite for WS1.6 interface.
+7. **StakingLock Non-yield Finalized** — [Confirmed] Remove all reward/emission/oracle paths; enforce negative invariants.
+8. **Token Upgradeability** — [Core Immutability Recommended] Token/Sale/Vesting non-upgradeable. UUPS limited to Phase 2 evolution modules only.
+9. **Safe Configuration** — [**4-of-7 Recommended**] ccm 3-of-4 script parameterization [Reuse] + 7-signer key ceremony [New]. Confirm viability of acquiring 7 signers.
+10. **Payment Currency** — [USDC Only] Fix price equivalent to KRW and list in USDC. On-ramp planned for Phase 2.
+11. **KYC Provider & Geo-blocking** — [Single provider after abstraction] Sumsub vs. Persona; US/CN IP + wallet blocking.
+11b. **KYC On-chain Reflection SLA** — [**Pre-screening before sale + Safe batch Recommended** (with notice that same-day participation is unavailable)] vs. automated batching via a dedicated hot key (key exposure trade-off).
+12. **BME DEX & Price Source** — [Aerodrome + TWAP/Chainlink conservative value] Finalize ASSA/USDC LP seeding size and funding source.
+13. **Audit SOW & Bounty** — [**2 full-scope audits** (Audit #1 = Token/Sale/Vesting/KYC at M2; Audit #2 = veASSA/BME at M3), discard delta audits, reserve slots early, launch Immunefi immediately post-mainnet].
+14. **Admin Console Authentication** — [**Upgrade to Safe Member SIWE Recommended**, mandatory for Phase 1] Avoid single point of failure with shared Bearer.
+15. **Brand Inheritance (Corrected by Measured BI)** — [**Red #EF2525 primary + White + Dark Ink canvas + Gold accent** finalized] ⚠️ The previous "Navy + Red + Gold" was assumed from pitch decks. The **measured BI (`docs/assa-bi/`) only contains Red and White** (no Navy or Gold). Realignment: Red = Brand/CTA; **navy = dApp dark canvas**; **gold = limited to badges/borders/tiers (no text usage)**; data visualization = neutral `--data-*` (no red). **WCAG measurement:** White text on `#EF2525` = **4.23:1 FAIL** → Finalize **Primary Background = #C81E14 (brand-pressed)**. Establish **ΔE separation** across the 3 red tones (`#EF2525` / `#D93A26` / `#DC2626`) for brand vs. progress vs. danger. **BI Master = bold wordmark (logo01.png)**; ▶ + wave symbol = logo mark (OG/favicon). Fonts: Righteous + Poppins + Chakra Petch + Pretendard (KO)/Noto JP. ⚠️ ccm reuse is not a simple 'color variable swap' but requires a **`--moss` (single accent, used 237 times) semantic split audit** (brand vs. data vs. positive). Details in `ASSA_WAVE_SITE_DESIGN.md` §1 · §1.0a · §6. Elevate WS2.1 to 'audit-based semantic split'.
+16. **Votes Source Consolidation** — [**Keep Phase 1 Token Votes Dormant; Governance using veASSA Only (Phase 3) Recommended**] Prevents double-voting. Determine veASSA `transfer` revert (non-transferable) & ERC5805 compatibility.
+17. **Sale Pausable** — [Add `whenNotPaused` to `purchase`; exempt claim/withdraw from pause Recommended] Required by spec §3.2.
+18. **Testnet Key Isolation Policy** — [**Per-project Key Isolation Recommended**] ccm testnet keys (`.phase2-rehearsal-keys.json` · `.carbon-oracle-keeper.json`) are `.gitignore`'d throwaway wallets exclusive to Sepolia and have no value for reuse. Creating **new dedicated deployer/keeper/admin keys** for assawave is highly recommended. Rationale: In the same chain (Base Sepolia `84532`), contract addresses are derived from `(deployer, nonce)`. Sharing keys mixes nonces → **precludes reproducibility of assawave testnet addresses · creates registry confusion**, and helps shrink the blast radius, isolate audit trails, and establish mainnet key discipline early. **The targets of reuse are settings/tooling, not the keys themselves** — Sepolia RPC (`sepolia.base.org`), `chainId` `84532`, faucet, deploy/keeper scripts (`_*-keeper-*.ts`), wrangler structure, and KYCRegistry rehearsal *patterns* (note that assawave must deploy its own instance and must not point to ccm's `0x9172...`). **Hard Rules:** ① Testnet keys ≠ Mainnet keys (strictly); ② **Do not copy** ccm `.env` or key JSONs to assawave (prevents secret sprawl) — reference patterns only, generate fresh keys; ③ Mainnet Safe signers & deployer must use dedicated hardware keys and must never be shared with anything. Exception: Individual dev/QA wallets (used for clicking MetaMask in Sepolia UI testing) are harmless to share between projects. *(Related: #9 Safe Configuration · #11b KYC On-chain Reflection SLA. Key generation/input must be executed directly by the user for security).*
 
 ---
 
-*본 계획은 ccm 라이브 기반(Base mainnet) 재사용을 전제로 한다. 크리티컬 패스의 실질 신규 작업은 ① veASSA 무이자 재작성(XL) ② BMEBurner+LP ③ ERC20Votes ④ 이벤트 인덱서 ⑤ mainnet KYC 운영 ⑥ 세일/베스팅 TGE 회계 재작성이며, mainnet 세일은 **외부 감사#1 통과 + 법무 GO 의견서**를, veASSA/BME mainnet 배포는 **감사#2 통과**를 하드 게이트로 둔다. ccm에 제3자 외부 감사·이벤트 인덱서·fuzz 툴링·mainnet KYC 운영이 부재하므로 이들은 재사용이 아닌 신규로 산정한다. §8의 17개 결정(특히 #3 게이팅·#4 베스팅 모델·#16 votes 단일화는 다른 작업의 선행) 승인 후 M1 착수.*
+## 9. Immediate Actions (First Sprint, 1–2 Weeks)
+
+**Shared Package Skeleton (Option A — Minimal Extraction First)**
+- [ ] Scaffold shared package repo (`assa-ccm-shared` or publishable package inside ccm) + wire git dependencies for both repos
+- [ ] First migration of `session.ts` + `chains/config` (Base 8453/84532 · RPC · address map stub), verify **ccm regression test green**
+
+**On-chain (Critical Path Launch)**
+- [ ] Clone `ccm/onchain` → `assawave/onchain`: `hardhat.config.ts` (0.8.24 cancun · optimizer 200 · Base/Sepolia · Basescan v2 verify) · `mocks/` · `.env` template
+- [ ] **ASSAToken**: Fork `CCMToken` → inherit `ERC20Votes` → new `_update` override `(ERC20,Capped,Pausable,Votes)` + `nonces()` (`ERC20Permit,Nonces`) → change cap 5B → 10B (**maintain ERC20Capped**) → name/symbol = 'ASSA' → **finalize burn model** (Decision #6b) → execute compilation · `totalSupply ≤ 10B` · `_update` MRO unit tests
+- [ ] Bootstrap **new fuzz tooling** (Foundry forge or hardhat+fast-check — absent in ccm)
+- [ ] Deploy to Base Sepolia + verify + initialize address registry JSON
+
+**Design System (Parallel)**
+- [ ] Fork `frontend` tokens → swap `index.css` CSS variables to navy/red/gold (WCAG AA, gold limited to accents) + add ASSA Wordmark
+- [ ] Verify `primitives.tsx` runs unchanged
+
+**Backend (Parallel)**
+- [ ] Fork `portal-api` (index/auth/session/middleware/db/me/email) → update domain to `assawave.io`, enforce **exact set of `ALLOWED_DOMAINS`** → generate new secrets
+- [ ] New D1 + `0001_init` + **`sync_state` (event cursor) schema** → run `nonce` → `verify` → session cookie vitest e2e green
+
+**Infrastructure/CI**
+- [ ] Fork `wrangler.toml`: update `name` · D1 · `vars` (ASSA stub · dev = 84532) + environments + **cron topology split skeleton**
+- [ ] GitHub Actions: PR = typecheck + hardhat test + vitest + Slither + Solhint + coverage gates
+- [ ] **Inquire early with 2–3 audit firms** (separate SOWs for Audit #1 / #2) + **kickoff legal (VAUPA / securities) consultations** (M2 hard gate)
+- [ ] Register defensive domains (.ai/.net) · initiate DNSSEC setup
+
+---
+
+*This plan is premised on reusing the live ccm codebase (Base mainnet). The actual new tasks on the critical path are ① veASSA non-yield rewrite (XL), ② BMEBurner+LP, ③ ERC20Votes, ④ event indexer, ⑤ mainnet KYC operations, and ⑥ rewrite of Sale/Vesting TGE accounting. The mainnet sale is hard-gated on **passing External Audit #1 + acquisition of the Legal GO Opinion**, while the veASSA/BME mainnet deployment is hard-gated on **passing Audit #2**. Because ccm lacks third-party external audits, event indexing, fuzz tooling, and mainnet KYC operations, these are scoped as new implementations rather than reuse. M1 kickoff will commence following approval of the 18 decisions in §8 (specifically, #3 gating, #4 vesting model, and #16 votes source consolidation which are pre-requisites for other tasks).*

@@ -1,27 +1,27 @@
 # ASSA WAVE — Smart Contract Development Spec
 
-> **Status:** Draft v0.1 · **Date:** 2026-05 · **Chain:** Base (Ethereum L2) → 자체 L3 (Phase 2+)
-> **출처:** Whitepaper v2.0 / 재무 모델(ASSA_WAVE_Simulation.xlsx)
-> 본 문서는 개발 착수용 스펙이며, 토큰/세일 파라미터는 규제·감사 검토 후 확정한다.
+> **Status:** Draft v0.1 · **Date:** 2026-05 · **Chain:** Base (Ethereum L2) → Custom L3 (Phase 2+)
+> **Source:** Whitepaper v2.0 / Financial Model (ASSA_WAVE_Simulation.xlsx)
+> This document is the specification for initiating development. Token and sale parameters will be finalized after regulatory and audit reviews.
 
 ---
 
-## 0. 요약 (TL;DR)
+## 0. Summary (TL;DR)
 
-| 항목 | 결정 |
+| Item | Decision |
 |---|---|
-| 체인 | **Base** (mainnet `8453`, testnet Base Sepolia `84532`). Phase 2~ 자체 **L3(OP Stack)**, $ASSA 브리지 |
-| 토큰 표준 | $ASSA = **ERC-20**(10B hard cap), NFT = **ERC-1155** |
-| 언어/툴 | Solidity `^0.8.24`, **OpenZeppelin v5**, **Foundry**(forge/cast), Slither/Echidna |
-| 업그레이드 | 진화 모듈은 **UUPS proxy** + Timelock·Multisig 거버넌스. 토큰 코어는 최소 업그레이드/불변 |
-| 권한 | **AccessControl** 역할 + **Gnosis Safe(멀티시그)** + **TimelockController** |
-| 핵심 원칙 | 스테이킹은 **무이자 락업**(emission 없음). 소비는 **소각 sink**(70% burn). 채굴 emission은 front-loaded |
+| Chain | **Base** (mainnet `8453`, testnet Base Sepolia `84532`). Phase 2+ Custom **L3 (OP Stack)**, $ASSA bridge |
+| Token Standard | $ASSA = **ERC-20** (10B hard cap), NFT = **ERC-1155** |
+| Language/Tools | Solidity `^0.8.24`, **OpenZeppelin v5**, **Foundry** (forge/cast), Slither/Echidna |
+| Upgradability | Evolution modules use **UUPS proxy** + Timelock·Multisig governance. Token core is minimal upgradability / immutable. |
+| Permissions | **AccessControl** roles + **Gnosis Safe (Multisig)** + **TimelockController** |
+| Core Principles | Staking is **interest-free lockup** (no emission). Spending is a **burn sink** (70% burn). Mining emission is front-loaded. |
 
-설계 1원칙: **채굴(공급)을 스테이킹 락업·소비 소각(수요)이 흡수**한다. 컨트랙트는 이 균형을 온체인으로 강제한다.
+First Principle of Design: **Mining (supply) is absorbed by staking lockup and consumption burn (demand).** The smart contracts enforce this balance on-chain.
 
 ---
 
-## 1. 아키텍처 (모듈 맵)
+## 1. Architecture (Module Map)
 
 ```
                          ┌──────────────────────────────┐
@@ -36,26 +36,26 @@
           │ rewards                  │transfer│ lock                   │ USDC
    ┌──────▼───────┐          ┌───────▼──┐ ┌───▼─────────┐       ┌──────┴───────┐
    │EdgeNodeRegis │          │TokenSale │ │ StakingLock │       │   Treasury   │
-   │  (Phase 2)   │          │+Vesting  │ │ (veASSA,무이자)│      │ (allocations)│
+   │  (Phase 2)   │          │+Vesting  │ │ (veASSA, no yield)│    │ (allocations)│
    └──────────────┘          └──────────┘ └───┬─────────┘       └──────────────┘
-                                              │ weight
+                                               │ weight
    ┌─────────────────────────────────────────▼───────────────────────────────┐
    │  ConsumptionEngine (Phase 2) ─ spend→70% burn/30% prize ─ StarRanking/Battle│
    └────────────────────────────────────────────────────────────────────────────┘
    Phase 3: veASSA Governor · AllKillPool · PredictionMarket · DebutFundingDAO · SettlementOracle
 ```
 
-**컨트랙트 목록 / 단계**
+**Contract List / Phases**
 
-| # | 컨트랙트 | 표준/베이스 | Phase | 업그레이드 |
+| # | Contract | Standard/Base | Phase | Upgrade |
 |---|---|---|---|---|
-| 1 | `ASSAToken` | ERC20, ERC20Permit, ERC20Votes, AccessControl | **1** | 불변(또는 최소) |
-| 2 | `TokenSale` | custom + Merkle(KYC) | **1** | UUPS |
+| 1 | `ASSAToken` | ERC20, ERC20Permit, ERC20Votes, AccessControl | **1** | Immutable (or minimal) |
+| 2 | `TokenSale` | custom + Merkle (KYC) | **1** | UUPS |
 | 3 | `TokenVesting` | custom | **1** | UUPS |
 | 4 | `BMEBurner` | custom + DEX router | **1** | UUPS |
-| 5 | `StakingLock` (veASSA) | custom, 무이자, 비전송 | **1** | UUPS |
+| 5 | `StakingLock` (veASSA) | custom, interest-free, non-transferable | **1** | UUPS |
 | 6 | `Treasury` | custom + Safe | **1** | UUPS |
-| 7 | `ConsumptionEngine` | custom + 소각 | 2 | UUPS |
+| 7 | `ConsumptionEngine` | custom + burn | 2 | UUPS |
 | 8 | `StarRanking` / `FandomBattle` | custom + epoch | 2 | UUPS |
 | 9 | `EdgeNodeRegistry` + `MiningRewards` | custom + oracle | 2 | UUPS |
 | 10 | `PerformanceNFT` / `ConcertPassNFT` | ERC1155 | 2 | UUPS |
@@ -66,28 +66,28 @@
 
 ---
 
-## 2. 권한 & 거버넌스 (Access Control)
+## 2. Permissions & Governance (Access Control)
 
-모든 권한은 `AccessControl` 역할로 부여하고, 최종 admin은 **Gnosis Safe 멀티시그(예: 4-of-7)** → **TimelockController(48h)** 가 보유한다.
+All permissions are granted via `AccessControl` roles, and the ultimate admin is a **Gnosis Safe Multisig (e.g., 4-of-7)** → **TimelockController (48h)**.
 
-| Role | 보유자 | 권한 |
+| Role | Holder | Permissions |
 |---|---|---|
-| `DEFAULT_ADMIN_ROLE` | Timelock(Safe) | 역할 부여/회수, 업그레이드 승인 |
-| `MINTER_ROLE` | `MiningRewards`만 | $ASSA mint (cap 내) |
+| `DEFAULT_ADMIN_ROLE` | Timelock (Safe) | Grant/revoke roles, approve upgrades |
+| `MINTER_ROLE` | `MiningRewards` only | $ASSA mint (within cap) |
 | `BURNER_ROLE` | `BMEBurner`, `ConsumptionEngine` | $ASSA burn |
-| `SALE_ADMIN_ROLE` | 운영 Safe | 라운드 설정·화이트리스트 루트 |
-| `TREASURY_ROLE` | Treasury Safe | 분배 토큰 인출(베스팅 경유) |
-| `ORACLE_ROLE` | Chainlink/노드 어테스터 | 가격·점수·업타임 피드 |
-| `PAUSER_ROLE` | 운영 Safe | 긴급 일시정지 |
-| `UPGRADER_ROLE` | Timelock | UUPS 업그레이드 |
+| `SALE_ADMIN_ROLE` | Operator Safe | Configure rounds, whitelist root |
+| `TREASURY_ROLE` | Treasury Safe | Withdraw allocated tokens (via Vesting) |
+| `ORACLE_ROLE` | Chainlink/Node Attesters | Price, score, and uptime feeds |
+| `PAUSER_ROLE` | Operator Safe | Emergency pause |
+| `UPGRADER_ROLE` | Timelock | UUPS upgrades |
 
-원칙: **mint는 오직 `MiningRewards`**, **burn은 BME·소비 엔진**만. EOA 직접 mint/burn 금지.
+Principle: **Only `MiningRewards` can mint**, and **only BME/Consumption engines can burn**. Direct EOA mint/burn is prohibited.
 
 ---
 
-## 3. Phase 1 (MVP) — 상세 스펙
+## 3. Phase 1 (MVP) — Detailed Spec
 
-> Phase 1 목표: **TGE·토큰·세일/베스팅·BME·무이자 스테이킹·지갑연결**까지. 감사 1차 대상.
+> Phase 1 Goal: **TGE, Token, Sale/Vesting, BME, Interest-free Staking, and Wallet Connection**. Primary target for the 1st audit.
 
 ### 3.1 `ASSAToken` (ERC-20)
 
@@ -115,55 +115,55 @@ contract ASSAToken is ERC20, ERC20Permit, ERC20Votes, ERC20Burnable, AccessContr
         require(totalSupply() + amount <= CAP, "CAP");
         _mint(to, amount);
     }
-    // burn / burnFrom inherited (BURNER_ROLE 컨트랙트가 호출)
+    // burn / burnFrom inherited (called by BURNER_ROLE contracts)
     // ERC20Votes overrides (_update, nonces) per OZ v5
 }
 ```
 
-- **불변식:** `totalSupply() ≤ CAP` 항상 성립.
-- **decimals:** 18. **Permit(EIP-2612):** 가스리스 승인. **Votes:** 향후 거버넌스용 체크포인트.
-- **소수:** TGE 시 초기 유통분만 발행, 나머지는 `MiningRewards`가 10년 front-loaded로 mint.
-- **이벤트:** `Transfer`, `DelegateChanged`, 표준.
+- **Invariants:** `totalSupply() <= CAP` always holds.
+- **decimals:** 18. **Permit (EIP-2612):** Gasless approval. **Votes:** Checkpoints for future governance.
+- **Emission:** At TGE, only the initial circulating supply is minted. The rest is minted by `MiningRewards` over a 10-year front-loaded schedule.
+- **Events:** `Transfer`, `DelegateChanged`, standard.
 
-### 3.2 `TokenSale` (3 라운드, 고정가)
+### 3.2 `TokenSale` (3 Rounds, Fixed Price)
 
-세일 단가는 KRW 고정(30/50/70원)이나 온체인 결제는 **USDC(6 decimals)**. 라운드 설정 시 **USDC/ASSA 단가**를 KRW 기준 환율로 고정(frozen)한다. 구매분은 즉시 유통되지 않고 **`TokenVesting`에 스케줄로 적재**된다.
+The sale price is fixed in KRW (30/50/70 KRW), but on-chain payments are made in **USDC (6 decimals)**. When configuring a round, the **USDC/ASSA price** is frozen based on the KRW exchange rate. Purchased amounts are not immediately circulating; they are loaded as schedules into **`TokenVesting`**.
 
 ```solidity
 struct Round {
     uint64  start; uint64 end;
-    uint128 cap;            // 라운드 토큰 한도 (예: 30_000_000e18)
+    uint128 cap;            // Round token cap (e.g., 30_000_000e18)
     uint128 sold;
-    uint256 priceUsdcPerAssa; // USDC(1e6) per 1 ASSA, 라운드 설정 시 고정
-    bytes32 merkleRoot;    // KYC/화이트리스트 (allowlist)
-    uint8   tgeBps;        // TGE 즉시 언락 % (R1 0 / R2 500 / R3 1000)
-    uint32  cliff;         // 초 (R1 6m / R2 3m / R3 0)
-    uint32  duration;      // 선형 베스팅 초 (R1 18m / R2 12m / R3 6m)
+    uint256 priceUsdcPerAssa; // USDC (1e6) per 1 ASSA, fixed when round is configured
+    bytes32 merkleRoot;    // KYC/Whitelist (allowlist)
+    uint8   tgeBps;        // TGE immediate unlock % (R1 0 / R2 500 / R3 1000)
+    uint32  cliff;         // Seconds (R1 6m / R2 3m / R3 0)
+    uint32  duration;      // Linear vesting duration in seconds (R1 18m / R2 12m / R3 6m)
 }
 
 interface ITokenSale {
     function configureRound(uint8 id, Round calldata r) external; // SALE_ADMIN
-    function buy(uint8 roundId, uint256 assaAmount, bytes32[] calldata proof) external; // USDC 사전 approve
+    function buy(uint8 roundId, uint256 assaAmount, bytes32[] calldata proof) external; // USDC pre-approved
     function roundOf(uint8 id) external view returns (Round memory);
 }
 ```
 
-- **흐름:** `buy()` → USDC `safeTransferFrom`(구매자→Treasury) → `sold += amount` (cap 체크) → `TokenVesting.createSchedule(buyer, amount, tge, cliff, duration, SALE)`.
-- **검증:** 라운드 활성(start≤now≤end), cap 미초과, `MerkleProof.verify(proof, root, leaf=keccak(addr))`, 1인 한도(옵션).
-- **자금:** 전액 `Treasury`(Safe). 환불 불가(또는 미달 시 admin refund 로직).
-- **이벤트:** `RoundConfigured`, `Purchased(buyer, roundId, assa, usdc)`.
-- **보안:** `ReentrancyGuard`, `SafeERC20`, `whenNotPaused`. **가격 동결**(라운드 중 변경 불가).
+- **Flow:** `buy()` → USDC `safeTransferFrom` (buyer → Treasury) → `sold += amount` (cap check) → `TokenVesting.createSchedule(buyer, amount, tge, cliff, duration, SALE)`.
+- **Validation:** Round is active (start <= now <= end), cap not exceeded, `MerkleProof.verify(proof, root, leaf=keccak(addr))`, individual limit (optional).
+- **Funds:** Entire amount goes to `Treasury` (Safe). Non-refundable (or admin refund logic if target not met).
+- **Events:** `RoundConfigured`, `Purchased(buyer, roundId, assa, usdc)`.
+- **Security:** `ReentrancyGuard`, `SafeERC20`, `whenNotPaused`. **Price Freeze** (cannot be modified during the round).
 
 ### 3.3 `TokenVesting`
 
-카테고리별 cliff+linear 스케줄. 세일·Founder·Team·Investor·Partner·ECO·Marketing 분배에 공통 사용.
+Cliff + linear schedules per category. Used commonly for Sale, Founder, Team, Investor, Partner, ECO, and Marketing allocations.
 
 ```solidity
 struct Schedule {
     uint128 total; uint128 claimed;
     uint64  start; uint32 cliff; uint32 duration;
-    uint16  tgeBps;       // TGE 즉시 분
-    bool    revocable;    // Team/Founder 등
+    uint16  tgeBps;       // TGE immediate unlock bps
+    bool    revocable;    // For Team/Founder, etc.
     uint8   category;
 }
 
@@ -172,29 +172,29 @@ interface ITokenVesting {
                             uint32 cliff, uint32 duration, bool revocable, uint8 cat) external; // VESTING_ADMIN
     function claim() external;                       // beneficiary
     function releasable(address who) external view returns (uint256);
-    function revoke(address who) external;           // revocable만, ADMIN
+    function revoke(address who) external;           // revocable only, ADMIN
 }
 ```
 
-표준 분배 베스팅(권고):
+Standard Distribution Vesting (Recommended):
 
-| 카테고리 | TGE | Cliff | Linear | revocable |
+| Category | TGE | Cliff | Linear | Revocable |
 |---|---|---|---|---|
-| Private R1 (30원) | 0% | 6m | 18m | no |
-| Private R2 (50원) | 5% | 3m | 12m | no |
-| Private R3 (70원) | 10% | 0 | 6m | no |
+| Private R1 (30 KRW) | 0% | 6m | 18m | no |
+| Private R2 (50 KRW) | 5% | 3m | 12m | no |
+| Private R3 (70 KRW) | 10% | 0 | 6m | no |
 | Investor | 0% | 6–12m | 18–24m | no |
 | Founder | 0% | 12m | 48m | yes |
 | Team & Advisor | 0% | 12m | 36m | yes |
-| Partner | 0% | 6m | 24m | yes(마일스톤) |
-| ECO/Marketing | 일부 | 0 | 24–36m | yes |
+| Partner | 0% | 6m | 24m | yes (milestone-based) |
+| ECO/Marketing | Partial | 0 | 24–36m | yes |
 
-- **claim:** `releasable = total*tgeBps/1e4 + (now>start+cliff ? linear : 0) − claimed`.
-- **이벤트:** `ScheduleCreated`, `Claimed`, `Revoked`.
+- **claim:** `releasable = total*tgeBps/1e4 + (now>start+cliff ? linear : 0) - claimed`.
+- **Events:** `ScheduleCreated`, `Claimed`, `Revoked`.
 
 ### 3.4 `BMEBurner` (Burn-Mint Equilibrium)
 
-외부 매출(USDC)의 일부로 DEX에서 $ASSA 매입 후 **영구 소각**. B2C 20% / B2B 30~40%.
+Purchases $ASSA from a DEX using a portion of external revenue (USDC) and **permanently burns** it. B2C 20% / B2B 30–40%.
 
 ```solidity
 interface IBMEBurner {
@@ -203,14 +203,14 @@ interface IBMEBurner {
 }
 ```
 
-- **흐름:** `usdc.safeTransferFrom` → `burnAmount = usdc*burnBps/1e4` → Aerodrome/Uniswap `swapExactTokensForTokens`(USDC→ASSA, `minAssaOut` 슬리피지 가드, deadline) → `ASSA.burn(received)`.
-- **오라클/MEV:** TWAP 또는 Chainlink 가격으로 `minAssaOut` 산정, 프라이빗 멤풀/스플릿 실행 권장.
-- **이벤트:** `Burned(usdcIn, assaBurned, burnBps)`.
-- **불변식:** 소각분은 `Treasury` 외부로 나가지 않고 `address(0)`로만.
+- **Flow:** `usdc.safeTransferFrom` → `burnAmount = usdc*burnBps/1e4` → Aerodrome/Uniswap `swapExactTokensForTokens` (USDC → ASSA, `minAssaOut` slippage guard, deadline) → `ASSA.burn(received)`.
+- **Oracle/MEV:** Determine `minAssaOut` via TWAP or Chainlink price; using a private mempool or split execution is highly recommended.
+- **Events:** `Burned(usdcIn, assaBurned, burnBps)`.
+- **Invariants:** Burned tokens are only sent to `address(0)` and never transferred elsewhere.
 
-### 3.5 `StakingLock` (veASSA · **무이자 락업**)
+### 3.5 `StakingLock` (veASSA · **Interest-free Lockup**)
 
-$ASSA를 시간 락업해 **veASSA 가중치**(비전송)를 얻는다. **이자/emission 없음** — 보상은 랭킹 가중치·거버넌스·티어 자격. Curve veToken 모델 차용(보상 분배만 제거).
+Lock up $ASSA for a period of time to receive **veASSA weight** (non-transferable). **No yield/emission** — rewards are ranking weights, governance power, and tier eligibility. Borrowed from the Curve veToken model (with reward distribution removed).
 
 ```solidity
 struct Lock { uint128 amount; uint64 end; uint64 start; }
@@ -219,102 +219,102 @@ interface IStakingLock {
     function lock(uint256 amount, uint256 duration) external;   // max 4y
     function increaseAmount(uint256 amount) external;
     function increaseUnlockTime(uint256 newEnd) external;
-    function withdraw() external;                                // end 이후 원금만
-    function votingPower(address u) external view returns (uint256); // 시간 감쇠 가중
-    function tierWeight(address u) external view returns (uint256);  // Tier multiplier 입력
+    function withdraw() external;                                // Principal only after end
+    function votingPower(address u) external view returns (uint256); // Time-decayed weight
+    function tierWeight(address u) external view returns (uint256);  // Tier multiplier input
 }
 ```
 
-- **가중:** `weight = amount * (lockRemaining / MAXTIME)` (선형 감쇠). 거버넌스·랭킹 입력.
-- **No-yield 강제:** 컨트랙트에 reward 분배 함수 없음 → 가치 유출 0. 공급 락업으로 매도압력만 감소.
-- **비전송:** veASSA 잔액 transfer 불가(ERC20Votes-like 체크포인트만).
-- **이벤트:** `Locked`, `Withdrawn`.
+- **Weighting:** `weight = amount * (lockRemaining / MAXTIME)` (linear decay). Input for governance and ranking.
+- **Enforced No-Yield:** No reward distribution function exists in the contract → zero value outflow. Locking supply simply reduces selling pressure.
+- **Non-transferable:** veASSA balances cannot be transferred (only ERC20Votes-like checkpoints).
+- **Events:** `Locked`, `Withdrawn`.
 
 ### 3.6 `Treasury`
 
-분배 버킷(40/12/5/10/10/5/8/5/5%) 보유. 베스팅·유동성·운영 자금 집행은 Safe + Timelock. 세일 USDC 수령처.
+Holds the distribution buckets (40/12/5/10/10/5/8/5/5%). Vesting, liquidity, and operational fund executions are managed via Safe + Timelock. Recipient of Sale USDC.
 
 ---
 
-## 4. Phase 2 — 개요 스펙
+## 4. Phase 2 — Outline Specification
 
-### 4.1 `ConsumptionEngine` (Spend-to-Compete · 소비 소각)
+### 4.1 `ConsumptionEngine` (Spend-to-Compete · Consumption Burn)
 
 ```solidity
 interface IConsumptionEngine {
-    /// @notice 팬이 스타/팬덤에 토큰을 소비. 70% burn + 30% prizePool.
+    /// @notice Fans spend tokens on stars/fandoms. 70% burn + 30% prizePool.
     function spend(uint256 targetId, uint256 amount, bytes calldata skillAttest) external;
-    function settleSeason(uint256 seasonId) external; // 리더보드 정산 → prize 분배
+    function settleSeason(uint256 seasonId) external; // Season settlement -> distribute prizes
 }
 ```
 
-- **분배:** `burn = amount*70%` (`ASSA.burn`), `prize = amount*30%` → `prizePool[targetId]`(아티스트·상금).
-- **랭킹:** `StarRanking.addPoints(targetId, weight)` — `weight = f(amount) * skillFactor`(diminishing returns + 실력 VPU 가중, `skillAttest`=오라클 서명).
-- **시즌:** epoch 단위 리셋, `settleSeason`에서 상위 팬덤/팬 보상(NFT·allocation).
-- **안티-고래/시빌:** 체감 곡선, Voice DNA 검증(off-chain), per-epoch 캡.
+- **Distribution:** `burn = amount * 70%` (`ASSA.burn`), `prize = amount * 30%` → `prizePool[targetId]` (Artist/Prize).
+- **Ranking:** `StarRanking.addPoints(targetId, weight)` — where `weight = f(amount) * skillFactor` (diminishing returns + skill-based VPU weighting, `skillAttest` = oracle signature).
+- **Season:** Resets per epoch; `settleSeason` rewards top fandoms/fans (NFTs, allocations).
+- **Anti-Whale/Sybil:** Diminishing returns curve, Voice DNA verification (off-chain), per-epoch caps.
 
 ### 4.2 `StarRanking` / `FandomBattle`
-시즌별 포인트 집계·정산. ARMY vs BLINK식 대결. 정산 시 보상 분배 + 이벤트.
+Aggregate and settle points per season. ARMY vs BLINK-style battles. Distribute rewards and trigger events upon settlement.
 
 ### 4.3 `EdgeNodeRegistry` + `MiningRewards`
-- 노드 등록(본드 스테이킹 + 하드웨어 어테스트), Tier, **front-loaded emission**을 노드 가중×업타임/추론증명(oracle)으로 분배. `claim()`. 채굴분 **auto-stake(veASSA)** 옵션 → 유통 억제.
-- emission 곡선은 재무 모델 §Mining 참조(Y1~Y10 비중).
+- Node registration (bond staking + hardware attestation), Tiers, and **front-loaded emission** distributed based on Node Weight x Uptime / Proof of Inference (oracle). `claim()`. Option for **auto-stake (veASSA)** of mined tokens → suppresses circulating supply.
+- Emission curve follows the financial model §Mining (Y1~Y10 allocations).
 
 ### 4.4 NFTs (ERC-1155)
-`PerformanceNFT`(S/A/B/C tier), `ConcertPassNFT`, `VoiceDNANFT`(Story Protocol IP·on-chain consent). 마켓 fee의 일부 BME 소각.
+`PerformanceNFT` (S/A/B/C tiers), `ConcertPassNFT`, and `VoiceDNANFT` (Story Protocol IP, on-chain consent). A portion of marketplace fees is burned via BME.
 
 ---
 
-## 5. Phase 3 — 개요
+## 5. Phase 3 — Outline
 
-| 컨트랙트 | 설명 |
+| Contract | Description |
 |---|---|
-| `ASSAGovernor` + `TimelockController` | OZ Governor(ERC-5805 votes=veASSA). Tier multiplier·Veto(레전드). 제안→타임락→실행 |
-| `AllKillPool` | 컴백 응원 풀, PAK/CAK 정산, Participation NFT |
-| `PredictionMarket` | 음악 outcome 예측, Chainlink **VRF**/oracle 정산 |
-| `DebutFundingDAO` | 신인 데뷔 펀딩 |
-| `SettlementOracle` | 7대 차트 API 통합(Chainlink + custom adapter) |
-| **L3 마이그레이션** | OP Stack 자체 L3, $ASSA 가스토큰, 정식 브리지(Base↔L3), 시퀀서 |
+| `ASSAGovernor` + `TimelockController` | OZ Governor (ERC-5805 votes=veASSA). Tier multiplier·Veto (Legends). Proposal → Timelock → Execution |
+| `AllKillPool` | Comeback cheering pool, PAK/CAK settlement, Participation NFT |
+| `PredictionMarket` | Music outcome prediction, settled via Chainlink **VRF**/oracle |
+| `DebutFundingDAO` | DAO funding for rookie debuts |
+| `SettlementOracle` | Integration of 7 major music charts (Chainlink + custom adapter) |
+| **L3 Migration** | Custom L3 using OP Stack, $ASSA as gas token, official bridge (Base ↔ L3), sequencer |
 
 ---
 
-## 6. 횡단 관심사 (Cross-cutting)
+## 6. Cross-cutting Concerns
 
-- **오라클:** 가격=Chainlink/TWAP, 무작위=Chainlink VRF, 점수·업타임·차트=서명 기반 custom oracle(`ORACLE_ROLE`).
-- **DEX 연동:** Aerodrome(Base 기본)/Uniswap v3 라우터. 슬리피지·deadline·MEV 가드.
-- **일시정지:** 핵심 모듈 `Pausable`(PAUSER). 단, 사용자 자금 인출(withdraw/claim)은 정지 예외 권장.
-- **업그레이드 거버넌스:** UUPS + `_authorizeUpgrade(onlyRole(UPGRADER))`, Timelock 경유. Storage gap(`uint256[50]`).
-- **컴플라이언스:** 세일 KYC(Merkle allowlist), 지역 차단(US/CN)은 프런트+오프체인, 토큰 자체는 무제한 전송(유틸리티). VAUPA/MAS/ADGM 검토.
-- **L2/가스:** calldata 최소화, batch, EIP-1559. Base 저가 활용.
-
----
-
-## 7. 보안 & 감사
-
-- **위협 모델:** 재진입, 권한 상승, 오라클 조작, 플래시론, MEV, 공급 불변식 위반, 베스팅 우회, 무한 mint.
-- **방어:** CEI 패턴, `ReentrancyGuard`, `SafeERC20`, pull-payment, 역할 최소권한, mint=오직 MiningRewards(cap), Safe+Timelock.
-- **정적/동적 분석:** Slither, Mythril, Echidna/Foundry invariant fuzz.
-- **감사:** mainnet 전 **2~3개사**(CertiK·Quantstamp·Halborn) + **버그바운티**(Immunefi).
-- **운영:** OZ Defender/Tenderly 모니터링·알림, 멀티시그, 타임락, incident runbook.
-
-**핵심 불변식(테스트로 강제):**
-1. `totalSupply ≤ 10B` 항상.
-2. mint 호출자 ∈ {MiningRewards}, burn 호출자 ∈ {BMEBurner, ConsumptionEngine}.
-3. 베스팅 `claimed ≤ total`, releasable는 스케줄 함수와 일치.
-4. 세일 `sold ≤ cap`, 라운드 가격 동결.
-5. StakingLock은 reward 분배 경로가 존재하지 않음(무이자).
+- **Oracles:** Price = Chainlink/TWAP; Randomness = Chainlink VRF; Scores/Uptime/Charts = Signature-based custom oracle (`ORACLE_ROLE`).
+- **DEX Integration:** Aerodrome (default on Base) / Uniswap v3 router. Slippage, deadline, and MEV guards.
+- **Pausing:** Core modules implement `Pausable` (`PAUSER`). However, it is recommended that user fund withdrawals (`withdraw`/`claim`) be excluded from pausing.
+- **Upgrade Governance:** UUPS + `_authorizeUpgrade(onlyRole(UPGRADER))` via Timelock. Storage gap (`uint256[50]`).
+- **Compliance:** Sale KYC (Merkle allowlist), geo-blocking (US/CN) enforced on frontend and off-chain; token transfer itself is unrestricted (utility token). Under VAUPA/MAS/ADGM review.
+- **L2/Gas:** Minimize calldata, batch transactions, EIP-1559. Leverage Base's low fees.
 
 ---
 
-## 8. 테스트 & 배포
+## 7. Security & Audits
 
-- **프레임워크:** Foundry. 유닛 + **fuzz** + **invariant** + **fork test**(Base).
-- **커버리지:** 라인/브랜치 ≥ 95% 핵심 모듈.
-- **시나리오:** 세일 3라운드·베스팅 cliff/linear, BME 소각, 락업/감쇠, 소비 70/30, cap 경계, 권한 경계.
-- **배포:** `script/Deploy.s.sol` → Base Sepolia → 감사 → mainnet. Basescan verify. 주소 레지스트리(JSON) 관리.
-- **환경:** `.env`(RPC, PRIVATE_KEY via hardware/Safe), `foundry.toml` profiles.
+- **Threat Model:** Reentrancy, privilege escalation, oracle manipulation, flash loans, MEV, supply invariant violation, vesting bypass, infinite minting.
+- **Defenses:** CEI pattern, `ReentrancyGuard`, `SafeERC20`, pull-payment, least privilege roles, minting restricted to `MiningRewards` (within cap), Safe + Timelock.
+- **Static/Dynamic Analysis:** Slither, Mythril, Echidna/Foundry invariant fuzzing.
+- **Audits:** **2–3 audit firms** (CertiK, Quantstamp, Halborn) prior to mainnet + **Bug Bounty** (Immunefi).
+- **Operations:** OZ Defender / Tenderly monitoring & alerts, multisig, timelock, incident response runbook.
 
-**레포 구조(권고)**
+**Core Invariants (Enforced by Tests):**
+1. `totalSupply <= 10B` always.
+2. Mint callers ∈ {MiningRewards}, burn callers ∈ {BMEBurner, ConsumptionEngine}.
+3. Vesting `claimed <= total`, releasable matches schedule functions.
+4. Sale `sold <= cap`, round prices frozen.
+5. `StakingLock` has no reward distribution path (interest-free).
+
+---
+
+## 8. Testing & Deployment
+
+- **Framework:** Foundry. Unit + **fuzz** + **invariant** + **fork test** (Base).
+- **Coverage:** Line/branch coverage >= 95% for core modules.
+- **Scenarios:** 3-round sale, vesting cliff/linear, BME burn, lockup/decay, consumption 70/30, cap boundaries, permission boundaries.
+- **Deployment:** `script/Deploy.s.sol` → Base Sepolia → Audit → Mainnet. Basescan verification. Managed address registry (JSON).
+- **Environment:** `.env` (RPC, PRIVATE_KEY via hardware/Safe), `foundry.toml` profiles.
+
+**Recommended Repo Structure**
 ```
 contracts/  (src/token, src/sale, src/staking, src/bme, src/consumption, src/node, src/gov)
 test/       (unit, invariant, fork)
@@ -325,15 +325,15 @@ foundry.toml
 
 ---
 
-## 9. 결정 필요 (Open Questions)
+## 9. Open Questions (Decisions Required)
 
-1. **세일 결제 통화:** USDC(권장) vs KRW-stable. 라운드 단가 동결 방식 확정.
-2. **토큰 업그레이드성:** 불변(권장) vs 최소 업그레이드.
-3. **Team/Founder 베스팅 revocable** 여부·조건.
-4. **L3 전환 시점**과 브리지/가스토큰 설계.
-5. **소비 엔진 skill 가중** 오라클(서명자·VPU 산출) 신뢰 모델.
-6. KYC 온체인(allowlist) vs 오프체인 게이팅 비중.
+1. **Sale Payment Currency:** USDC (recommended) vs. KRW-stable. Finalize round price freezing mechanism.
+2. **Token Upgradability:** Immutable (recommended) vs. minimal upgradability.
+3. **Team/Founder Vesting Revocability:** Whether it is revocable and under what conditions.
+4. **L3 Transition Timeline:** Timing and design of bridge/gas token.
+5. **Consumption Engine Skill Weighting:** Trust model for the oracle (signer and VPU calculation).
+6. **KYC Enforced On-chain (allowlist) vs. Off-chain Gating proportion.**
 
 ---
 
-*본 스펙은 정보·설계 목적이며 투자·법률 자문이 아니다. 토큰 세일·발행은 한국 VAUPA·증권법 등 규제 검토와 스마트컨트랙트 감사를 전제로 한다.*
+*This specification is for informational and design purposes only and does not constitute investment or legal advice. Token sale and issuance are subject to regulatory reviews, such as South Korea's VAUPA and securities laws, and smart contract audits.*

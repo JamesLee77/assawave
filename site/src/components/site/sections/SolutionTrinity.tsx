@@ -1,12 +1,31 @@
 import { useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
 import Section from "../Section";
 import SectionLabel from "../SectionLabel";
 
 type Item = { n: string; h: string; s: string; b: string };
 
-// 3엔진 = data 팔레트(brand red 아님, moss audit §2 DATA 분류). 사진 슬롯 매핑.
-const AXIS = ["var(--data-1)", "var(--data-2)", "var(--data-3)"] as const;
-const ENGINE_PHOTO = ["/brand/engine-streaming.jpg", "/brand/engine-spending.jpg", "/brand/engine-nodes.jpg"];
+const ENGINE_PHOTO = ["/brand/album-artwork.png", "/brand/hero-crowd.jpg", "/edge-device.jpg"];
+
+function Equalizer() {
+  const [heights, setHeights] = useState([40, 70, 50, 90, 30, 80]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHeights(prev => prev.map(() => Math.floor(Math.random() * 80) + 20));
+    }, 800);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="wave-progress-bar">
+      {heights.map((h, idx) => (
+        <div key={idx} className="wave-bar" style={{ height: `${h}%` }} />
+      ))}
+      <span className="font-data text-brand text-[13px] tracking-widest ml-4 self-center">LIVE FEED SYNCED</span>
+    </div>
+  );
+}
 
 export default function SolutionTrinity() {
   const { t } = useTranslation("home");
@@ -19,52 +38,109 @@ export default function SolutionTrinity() {
     <Section id="solution">
       <SectionLabel>{t("trinity.label")}</SectionLabel>
 
-      <h2 className="font-display text-[clamp(34px,5vw,60px)] leading-[1.05] tracking-[-0.02em] mt-8 mb-6 max-w-[920px]">
+      <h2 className="font-display text-[clamp(34px,5vw,60px)] leading-[1.05] tracking-[-0.025em] mt-8 mb-6 max-w-[920px]">
         {t("trinity.h1Pre")}
         <br />
-        <em className="italic-brand">{emA}</em> · <em className="italic-brand">{emB}</em> ·{" "}
-        <em className="italic-brand">{emC}</em>.
+        <span className="text-brand-on-dark text-glow-red">{emA}</span> · <span className="text-brand-on-dark text-glow-red">{emB}</span> ·{" "}
+        <span className="text-brand-on-dark text-glow-red">{emC}</span>.
       </h2>
 
       <p className="text-ink-soft text-lg leading-relaxed max-w-[680px] mb-12">
         {t("trinity.lead")}
       </p>
 
-      {/* 3엔진 — 시네마틱 미디어 카드 (스테이지 백드롭 + 사진 슬롯 + 스크림) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {items.map((c, i) => (
-          <article
-            key={c.n}
-            className="media-frame group relative flex min-h-[360px] flex-col justify-end p-7 md:p-8 transition-transform hover:-translate-y-1"
-          >
+      {/* 3엔진 — Premium Bento-Grid (Streaming = 8cols, Spending = 4cols, Nodes = 12cols) */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        {/* Streaming Card (8 columns) */}
+        {items[0] && (
+          <article className="md:col-span-8 card rounded-[20px] p-8 overflow-hidden relative group min-h-[360px] flex flex-col justify-between">
             <div className="absolute inset-0 -z-10" aria-hidden="true">
-              <div
-                className="absolute inset-0"
-                style={{
-                  background: `radial-gradient(125% 80% at 50% 0%, color-mix(in srgb, ${AXIS[i]} 32%, transparent), transparent 62%), linear-gradient(180deg, #0e0e1a, #08080f)`,
-                }}
-              />
-              <div
-                className="media-cover"
-                style={{ backgroundImage: `url(${ENGINE_PHOTO[i]})`, backgroundSize: "cover", backgroundPosition: "center" }}
-              />
-              <div className="scrim-b" />
+              <div className="media-cover opacity-[0.04] dark:opacity-[0.15]" style={{ backgroundImage: `url(${ENGINE_PHOTO[0]})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+              <div className="hidden dark:block absolute inset-0 scrim-b" />
             </div>
 
-            <div className="relative">
-              <span
-                className="mb-5 inline-block h-1 w-9 rounded-full"
-                style={{ background: AXIS[i], boxShadow: `0 0 12px 1px color-mix(in srgb, ${AXIS[i]} 70%, transparent)` }}
-              />
-              <div className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: AXIS[i] }}>
-                {c.n}
-              </div>
-              <div className="font-display text-white text-[28px] mt-3 leading-tight">{c.h}</div>
-              <div className="italic text-[15px] mt-1 mb-4 text-white/70">{c.s}</div>
-              <p className="text-white/75 text-[15.5px] leading-relaxed">{c.b}</p>
+            <div className="relative z-10">
+              <span className="text-brand font-data text-[12px] tracking-[0.16em] uppercase mb-3 block">
+                {items[0].n}
+              </span>
+              <h3 className="font-display text-ink text-[32px] font-bold mt-1 leading-tight">{items[0].h}</h3>
+              <p className="text-ink-soft italic text-[15px] mt-1 mb-4">{items[0].s}</p>
+              <p className="text-ink-soft text-[16px] leading-relaxed max-w-xl">
+                {items[0].b}
+              </p>
+            </div>
+
+            <div className="relative z-10 mt-8">
+              <Equalizer />
             </div>
           </article>
-        ))}
+        )}
+
+        {/* Spending Card (4 columns) */}
+        {items[1] && (
+          <article className="md:col-span-4 card rounded-[20px] p-8 overflow-hidden relative group flex flex-col justify-between min-h-[360px]">
+            <div className="absolute inset-0 -z-10" aria-hidden="true">
+              <div className="media-cover opacity-[0.04] dark:opacity-[0.15]" style={{ backgroundImage: `url(${ENGINE_PHOTO[1]})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+              <div className="hidden dark:block absolute inset-0 scrim-b" />
+            </div>
+
+            <div className="relative z-10">
+              <span className="text-brand font-data text-[12px] tracking-[0.16em] uppercase mb-3 block">
+                {items[1].n}
+              </span>
+              <h3 className="font-display text-ink text-[32px] font-bold mt-1 leading-tight">{items[1].h}</h3>
+              <p className="text-ink-soft italic text-[15px] mt-1 mb-4">{items[1].s}</p>
+              <p className="text-ink-soft text-[16px] leading-relaxed">
+                {items[1].b}
+              </p>
+            </div>
+
+            <div className="relative z-10 mt-8">
+              <div className="text-4xl font-data text-coral leading-none mb-2">1,248,390+</div>
+              <div className="text-xs text-ink-soft uppercase tracking-widest">ASSA Tokens Burned</div>
+            </div>
+          </article>
+        )}
+
+        {/* Nodes Card (12 columns) */}
+        {items[2] && (
+          <article className="md:col-span-12 card rounded-[20px] p-8 md:p-10 flex flex-col md:flex-row items-center gap-12 overflow-hidden relative min-h-[380px]">
+            <div className="absolute inset-0 -z-10" aria-hidden="true">
+              <div className="media-cover opacity-[0.03] dark:opacity-[0.10]" style={{ backgroundImage: `url(${ENGINE_PHOTO[2]})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+              <div className="hidden dark:block absolute inset-0 scrim-b" />
+            </div>
+
+            <div className="md:w-1/2 relative z-10">
+              <span className="text-brand font-data text-[12px] tracking-[0.16em] uppercase mb-3 block">
+                {items[2].n}
+              </span>
+              <h3 className="font-display text-ink text-[32px] font-bold mt-1 leading-tight">{items[2].h}</h3>
+              <p className="text-ink-soft italic text-[15px] mt-1 mb-4">{items[2].s}</p>
+              <p className="text-ink-soft text-[16px] leading-relaxed mb-6">
+                {items[2].b}
+              </p>
+              <ul className="space-y-3 font-body text-ink-soft text-[15px]">
+                <li className="flex items-center gap-3">
+                  <span className="h-2 w-2 rounded-full bg-brand" />
+                  Proof of Fan Participation Attestation
+                </li>
+                <li className="flex items-center gap-3">
+                  <span className="h-2 w-2 rounded-full bg-brand" />
+                  Exclusive NFT Staking & Rewards Access
+                </li>
+              </ul>
+            </div>
+
+            <div className="md:w-1/2 relative group flex justify-center items-center">
+              <div className="absolute -inset-4 bg-brand/20 blur-3xl opacity-0 group-hover:opacity-40 transition-opacity duration-500 rounded-full" />
+              <img
+                alt="Edge-AI Mining Node"
+                className="relative z-10 w-full max-w-sm drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
+                src="/brand/assa-mark.png"
+              />
+            </div>
+          </article>
+        )}
       </div>
     </Section>
   );

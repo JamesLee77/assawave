@@ -18,7 +18,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
           {/* accent = brand-pressed(#C81E14): RainbowKit 버튼 흰 글자 AA 보장 */}
-          <RainbowKitProvider theme={darkTheme({ accentColor: "#c81e14" })} locale="ko-KR">
+          <RainbowKitProvider theme={darkTheme({ accentColor: "#c81e14" })} locale="en-US">
             <BrowserRouter>
               <App />
             </BrowserRouter>

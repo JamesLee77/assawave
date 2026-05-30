@@ -1,7 +1,3 @@
-// ASSA WAVE 워드마크 — 실제 BI(docs/assa-bi/download.jpg) 투명 추출본.
-// site/public/brand/assa-wordmark-{red,white}.png (red 259x79 · white 616x194).
-// 이미지는 고정색이라 currentColor 미적용 — variant로 선택.
-
 type Props = {
   height?: number;
   className?: string;
@@ -9,23 +5,54 @@ type Props = {
   title?: string;
 };
 
+/**
+ * Combined ASSA WAVE branding component.
+ * Uses the official white ASSA logo (containing symbol + letters)
+ * next to the styled "WAVE" text, keeping them perfectly scaled.
+ */
 export default function WaveMark({
   height = 28,
   className,
   variant = "red",
   title = "ASSA WAVE",
 }: Props) {
-  const src =
-    variant === "white"
-      ? "/brand/assa-wordmark-white.png"
-      : "/brand/assa-wordmark-red.png";
+  const isWhite = variant === "white";
+  const waveFontSize = height * 0.62; // Mathematically matches the ASSA letter height perfectly!
+
   return (
-    <img
-      src={src}
-      alt={title}
-      style={{ height, width: "auto" }}
-      className={className}
-      draggable={false}
-    />
+    <div 
+      className={`flex items-center gap-3 select-none ${className || ""}`} 
+      style={{ height }}
+      title={title}
+    >
+      {/* Official White Wordmark Logo (contains Play Symbol + ASSA letters) */}
+      <img 
+        src="/brand/assa-wordmark-white.png" 
+        alt="ASSA BI" 
+        className="dark:invert-0 invert"
+        style={{ 
+          height: "100%", 
+          width: "auto", 
+          objectFit: "contain",
+        }}
+        draggable={false}
+      />
+
+      {/* WAVE Text - Scaled mathematically to match the ASSA letter height */}
+      <span 
+        className={`font-display font-extrabold uppercase tracking-widest select-none ${
+          isWhite 
+            ? "text-ink" 
+            : "text-brand text-glow-red"
+        }`}
+        style={{ 
+          fontSize: waveFontSize,
+          lineHeight: 1,
+          letterSpacing: "0.1em"
+        }}
+      >
+        WAVE
+      </span>
+    </div>
   );
 }

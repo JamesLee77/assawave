@@ -31,12 +31,12 @@
       "eyebrow": "Web3 fan economy · Built on Base",
       "h1Pre": "The new wave of K-pop fandom,",
       "h1Em": "owned by fans.",
-      "lead": "Streaming turned passion into billions — yet fans never owned a share. ASSA WAVE puts that value on-chain: what fans spend creates value, and that value flows back to fans.",
+      "lead": "Singing on mobile turns passion into tokens. ASSA WAVE puts fan vocal performance and spending on-chain, redirecting value back to the community.",
       "micro": "ASSA — the star of the stage.",
       "ctaApp": "Open App",
       "ctaPaper": "Read Whitepaper",
       "chips": [
-        ["Streaming → Value", "data-1"],
+        ["Singing → Value", "data-1"],
         ["Fan rewards", "data-2"],
         ["On-chain proof", "data-3"],
         ["Fan-owned", "data-4"]
@@ -56,16 +56,16 @@
     "trinity": {
       "label": "Solution",
       "h1Pre": "One token, three engines.",
-      "h1EmA": "Streaming",
+      "h1EmA": "Vocal Singing",
       "h1EmB": "Spending",
       "h1EmC": "Nodes",
-      "lead": "Around $ASSA, streaming, spending and nodes circulate to keep supply and demand in balance.",
+      "lead": "Around $ASSA, mobile singing, spending and nodes circulate to keep supply and demand in balance.",
       "items": [
         {
-          "n": "01 · STREAMING",
-          "h": "Streaming = WAVE",
-          "s": "the more you listen",
-          "b": "Fan streaming is recorded on-chain as WAVE and flows back as rewards."
+          "n": "01 · SING TO EARN",
+          "h": "Mobile Singing = WAVE",
+          "s": "the more you sing",
+          "b": "Singing in the MagicSing app generates vocal performance scores (VPU), recorded on-chain as WAVE to earn skill-based rewards."
         },
         {
           "n": "02 · SPENDING",
