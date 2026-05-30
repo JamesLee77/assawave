@@ -1,21 +1,179 @@
 {
   "common": {
     "appName": "ASSA WAVE",
-    "official": "Official domain: assawave.io"
+    "official": "Official domain: assawave.io — beware of other sites"
   },
   "nav": {
     "tokenomics": "Tokenomics",
     "roadmap": "Roadmap",
     "faq": "FAQ",
-    "sale": "Join Sale"
+    "app": "Open App"
   },
   "footer": {
     "terms": "Terms",
     "privacy": "Privacy",
-    "disclaimer": "Disclaimer"
+    "disclaimer": "Disclaimer",
+    "copyright": "© 2026 ASSA WAVE"
   },
   "home": {
-    "eyebrow": "K-POP · WEB3 · WAVE",
-    "sub": "ASSA WAVE — where music, fandom and Web3 meet. Token sale, no-yield staking, spend-to-compete."
+    "anchors": {
+      "manifesto": "Manifesto",
+      "solution": "Solution",
+      "tokenomics": "Tokenomics",
+      "market": "Market",
+      "roadmap": "Roadmap"
+    },
+    "hero": {
+      "eyebrow": "K-POP · WEB3 · WAVE",
+      "h1Pre": "The new wave of K-pop fandom,",
+      "h1Em": "owned by fans.",
+      "lead": "Streaming turned passion into billions — yet fans never owned a share. ASSA WAVE puts that value on-chain: what fans spend creates value, and that value flows back to fans.",
+      "micro": "ASSA — the star of the stage.",
+      "ctaApp": "Open App",
+      "ctaPaper": "Read Whitepaper",
+      "factsLabel": "At a glance",
+      "facts": [
+        ["Token", "$ASSA"],
+        ["Max supply", "10B"],
+        ["Network", "Base"],
+        ["Standard", "ERC-20"]
+      ]
+    },
+    "problem": {
+      "label": "Manifesto",
+      "h1Pre": "Fandom built the industry —",
+      "h1Em": "but the value never came back.",
+      "items": [
+        ["Streaming revenue, unreturned", "Billions of plays, nothing for fans. Revenue stays with platforms and middlemen."],
+        ["Fan labor, unpaid", "Streaming parties, voting, translation — fans' time and money build results they hold no stake in."],
+        ["Centralized lock-in", "Accounts, points and goods live on a company ledger. One policy change can erase them."]
+      ],
+      "ctaPaper": "More in the whitepaper"
+    },
+    "trinity": {
+      "label": "Solution",
+      "h1Pre": "One token, three engines.",
+      "h1EmA": "Streaming",
+      "h1EmB": "Spending",
+      "h1EmC": "Nodes",
+      "lead": "Around $ASSA, streaming, spending and nodes circulate to keep supply and demand in balance.",
+      "items": [
+        {
+          "n": "01 · STREAMING",
+          "h": "Streaming = WAVE",
+          "s": "the more you listen",
+          "b": "Fan streaming is recorded on-chain as WAVE and flows back as rewards."
+        },
+        {
+          "n": "02 · SPENDING",
+          "h": "Spending = Burn",
+          "s": "the more you spend",
+          "b": "Spending on goods, events and content burns $ASSA, shrinking supply and concentrating value."
+        },
+        {
+          "n": "03 · NODE",
+          "h": "Nodes = Mining",
+          "s": "participation is the network",
+          "b": "Fan and partner nodes run the network and share in emissions. (Phase 2)"
+        }
+      ],
+      "balance": "Supply ↔ Demand balance"
+    },
+    "tokenomics": {
+      "label": "Tokenomics",
+      "h1Pre": "Supply,",
+      "h1Em": "absorbed by demand.",
+      "lede": "Mining emission (supply) is absorbed by no-yield locking and spend-burning (demand). The contracts enforce this balance on-chain. 10B hard cap.",
+      "allocLabel": "Token allocation",
+      "burnLabel": "Cumulative burn (BME)",
+      "vestLabel": "Vesting by category",
+      "tableCategory": "Category",
+      "tableShare": "Share",
+      "alloc": {
+        "sale": "Distribution",
+        "treasury": "Treasury",
+        "team": "Team & Advisors",
+        "investor": "Investors",
+        "mining": "Mining emission",
+        "partner": "Partners",
+        "ecoMarketing": "Eco & Marketing",
+        "founder": "Founders",
+        "community": "Community & Liquidity"
+      },
+      "vest": {
+        "r1": "Distribution T1",
+        "r2": "Distribution T2",
+        "r3": "Distribution T3",
+        "investor": "Investors",
+        "founder": "Founders",
+        "team": "Team & Advisors",
+        "partner": "Partners",
+        "ecoMarketing": "Eco & Marketing"
+      },
+      "vestCliff": "Cliff (lock)",
+      "vestLinear": "Linear unlock",
+      "vestTge": "TGE unlock",
+      "burnConsumption": "Spend burn",
+      "burnB2c": "BME · B2C",
+      "burnB2b": "BME · B2B",
+      "burnAria": "Cumulative burn trend (illustrative model). 70% of spend burned; BME buys back and burns from revenue.",
+      "burnCaption": "Cumulative burn (illustrative · live once the indexer is connected)",
+      "lockTitle": "No-yield lock (veASSA)",
+      "lockChip": "NO YIELD",
+      "lockHead": "No interest, no APY — by design",
+      "lockBody": "Locking pays no yield. It grants only ranking, governance and tier weight, reducing sell pressure to absorb supply. Principal only is returned at expiry.",
+      "sinkTitle": "Spend burn (BME)",
+      "sinkHead": "The more it is used, the more it is gone",
+      "sinkBody": "70% of spend is burned, and a share of external revenue (B2C 20% · B2B 30–40%) buys back and permanently burns $ASSA.",
+      "ctaApp": "Open App",
+      "ctaPaper": "Tokenomics in the whitepaper"
+    },
+    "market": {
+      "label": "Market & Scenarios",
+      "h1Pre": "Fandom is a market,",
+      "h1Em": "and markets create demand.",
+      "lede": "On top of the K-pop fandom economy and the MagicSing install base, locking and burning demand absorbs mining supply.",
+      "stat": {
+        "tam": "Market size (TAM)",
+        "installs": "Install base",
+        "mau": "Monthly actives (MAU)",
+        "share": "Target share"
+      },
+      "statsNote": "※ Figures are estimates and will be updated when finalized.",
+      "scenarioLabel": "Demand / supply scenario",
+      "scenarioAria": "Demand and supply scenario curves. Supply (mining emission) declines while demand (locking and burning) rises, crossing at the balance point.",
+      "scenarioNote": "※ Illustrative model — not investment advice.",
+      "supply": "Supply",
+      "demand": "Demand",
+      "phase": "Phase",
+      "crossover": "Balance point",
+      "card": {
+        "demand": { "title": "Demand absorption", "body": "No-yield locking and spend-burning shrink circulating supply and absorb sell pressure." },
+        "supply": { "title": "Supply schedule", "body": "Mining emission is front-loaded — heavy early and declining over time." },
+        "assumption": { "title": "Scenario assumptions", "body": "An illustrative model on conservative assumptions; it does not guarantee outcomes." }
+      },
+      "ctaPaper": "Read the full whitepaper"
+    },
+    "node": {
+      "label": "Node network",
+      "phase": "Phase 2",
+      "h1Pre": "Run a node,",
+      "h1Em": "power the network.",
+      "lede": "ASSA nodes run on edge-AI hardware. Fans and partners operate them to run the network and share in emissions — no data center required.",
+      "deviceName": "Edge-AI Node",
+      "deviceSub": "RISC-V reference build",
+      "status": "ONLINE",
+      "specsLabel": "Reference hardware",
+      "specs": [
+        ["AI compute", "60 TOPS"],
+        ["CPU", "Octa-core RISC-V · 2.4 GHz"],
+        ["Memory", "up to 32 GB LPDDR5"],
+        ["Network", "Dual Gigabit Ethernet"],
+        ["Class", "Industrial · −20–60°C"],
+        ["Runtime", "Docker · KVM · ROS"]
+      ],
+      "note": "Reference device: Firefly AIBOX-K3 (SpacemiT K3 RISC-V). Final node spec TBD.",
+      "ctaPaper": "Node program in the whitepaper"
+    }
   }
 }

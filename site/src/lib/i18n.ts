@@ -18,14 +18,16 @@ const resources: Resource = {
 };
 
 const options: InitOptions = {
-  fallbackLng: "ko",
-  supportedLngs: ["ko", "en", "ja"],
+  // 영어 기본 — navigator 자동감지 제외(브라우저 로캘과 무관히 en 기본). ?lng=ko/ja 또는
+  // localStorage(향후 언어 셀렉터)로만 전환. 미스 키는 en으로 폴백.
+  fallbackLng: "en",
+  supportedLngs: ["en", "ko", "ja"],
   resources,
   ns: [...NAMESPACES],
   defaultNS: "common",
   interpolation: { escapeValue: false },
   detection: {
-    order: ["querystring", "localStorage", "navigator"],
+    order: ["querystring", "localStorage"],
     lookupQuerystring: "lng",
     lookupLocalStorage: "assawave-lng",
     caches: ["localStorage"],

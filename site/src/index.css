@@ -217,6 +217,12 @@ textarea {
   min-height: 44px;
 }
 
+/* LIVE 상태 펄스 — JS에서 useReducedMotion 가드 + 아래 @media 리셋 이중 안전 */
+@keyframes assa-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
 /* ⚠️ 신규: focus-visible — ccm 부재. 키보드 접근성(디자인 원칙 #4/접근성) */
 :focus-visible {
   outline: 2px solid var(--brand-on-light);

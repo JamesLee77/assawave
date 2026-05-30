@@ -7,7 +7,7 @@
     "tokenomics": "토크노믹스",
     "roadmap": "로드맵",
     "faq": "FAQ",
-    "sale": "세일 참여"
+    "app": "앱 열기"
   },
   "footer": {
     "terms": "이용약관",
@@ -15,7 +15,145 @@
     "disclaimer": "고지"
   },
   "home": {
-    "eyebrow": "K-POP · WEB3 · WAVE",
-    "sub": "ASSA WAVE — 음악·팬덤·Web3가 만나는 곳. 토큰 세일, 무이자 스테이킹, 소비 경쟁."
+    "anchors": {
+      "manifesto": "매니페스토",
+      "solution": "솔루션",
+      "tokenomics": "토크노믹스",
+      "market": "마켓",
+      "roadmap": "로드맵"
+    },
+    "hero": {
+      "eyebrow": "K-POP · WEB3 · WAVE",
+      "h1Pre": "K-pop을 소유하는",
+      "h1Em": "새로운 물결, ASSA WAVE",
+      "lead": "스트리밍이 만든 열광을 토큰으로. 팬의 소비가 가치를 만들고, 그 가치가 다시 팬에게 환류됩니다.",
+      "micro": "아싸(ASSA) — 무대의 주인공.",
+      "ctaSale": "세일 참여",
+      "ctaPaper": "백서 보기",
+      "countdown": {
+        "label": "퍼블릭 세일 라운드 1",
+        "caption": "USDC · KYC 필수 · US/CN 제한",
+        "dHint": "라운드 종료까지",
+        "supplyLabel": "라운드 배정",
+        "supply": "120M ASSA",
+        "priceLabel": "단가",
+        "price": "$0.012"
+      }
+    },
+    "problem": {
+      "label": "매니페스토",
+      "h1Pre": "팬덤은 산업을 키웠지만,",
+      "h1Em": "그 가치는 팬에게 돌아오지 않았다.",
+      "items": [
+        ["스트리밍 수익 미환류", "수십억 회 재생도 팬에게는 0원. 수익은 플랫폼과 중간자에 머문다."],
+        ["팬 노동 무보상", "총공·스밍·투표·번역 — 팬의 시간과 돈이 만든 성과에 지분이 없다."],
+        ["중앙화 종속", "계정·포인트·굿즈는 회사 장부 안. 정책 한 줄로 언제든 사라질 수 있다."]
+      ],
+      "ctaPaper": "백서에서 자세히"
+    },
+    "trinity": {
+      "label": "솔루션",
+      "h1Pre": "하나의 토큰, 세 개의 엔진.",
+      "h1EmA": "스트리밍",
+      "h1EmB": "소비",
+      "h1EmC": "노드",
+      "lead": "$ASSA를 중심으로 스트리밍·소비·노드가 순환하며 공급과 수요의 균형을 맞춥니다.",
+      "items": [
+        {
+          "n": "01 · STREAMING",
+          "h": "스트리밍 = WAVE",
+          "s": "들을수록 쌓인다",
+          "b": "팬의 스트리밍 활동이 온체인 WAVE로 기록되고 보상으로 환류됩니다."
+        },
+        {
+          "n": "02 · CONSUMPTION",
+          "h": "소비 = 소각",
+          "s": "쓸수록 줄어든다",
+          "b": "굿즈·이벤트·콘텐츠 소비가 $ASSA를 소각해 공급을 줄이고 가치를 응축합니다."
+        },
+        {
+          "n": "03 · NODE",
+          "h": "노드 = 채굴",
+          "s": "참여가 네트워크다",
+          "b": "팬·파트너 노드가 네트워크를 운영하며 발행을 분배받습니다. (Phase 2)"
+        }
+      ],
+      "balance": "공급 ↔ 수요 균형"
+    },
+    "tokenomics": {
+      "label": "토크노믹스",
+      "h1Pre": "공급은",
+      "h1Em": "수요가 흡수한다.",
+      "lede": "채굴 emission(공급)을 무이자 락업과 소비 소각(수요)이 흡수합니다. 컨트랙트가 이 균형을 온체인으로 강제합니다. 총발행 10B 하드캡.",
+      "allocLabel": "토큰 배분",
+      "burnLabel": "누적 소각 (BME)",
+      "vestLabel": "카테고리별 베스팅",
+      "tableCategory": "카테고리",
+      "tableShare": "비중",
+      "alloc": {
+        "sale": "세일",
+        "treasury": "재단·운영",
+        "team": "팀·자문",
+        "investor": "투자자",
+        "mining": "채굴 emission",
+        "partner": "파트너",
+        "ecoMarketing": "ECO·마케팅",
+        "founder": "창업자",
+        "community": "커뮤니티·유동성"
+      },
+      "vest": {
+        "r1": "세일 R1",
+        "r2": "세일 R2",
+        "r3": "세일 R3",
+        "investor": "투자자",
+        "founder": "창업자",
+        "team": "팀·자문",
+        "partner": "파트너",
+        "ecoMarketing": "ECO·마케팅"
+      },
+      "vestCliff": "Cliff (락업)",
+      "vestLinear": "선형 언락",
+      "vestTge": "TGE 언락",
+      "burnConsumption": "소비 소각",
+      "burnB2c": "BME · B2C",
+      "burnB2b": "BME · B2B",
+      "burnAria": "누적 소각량 추이(예시 모델). 소비 70% 소각, BME 매출 매입소각.",
+      "burnCaption": "누적 소각 추이 (예시 · 인덱서 연결 시 실집계)",
+      "lockTitle": "무이자 락업 (veASSA)",
+      "lockChip": "NO YIELD",
+      "lockHead": "이자·APY 없음 — 의도된 설계",
+      "lockBody": "락업은 이자를 주지 않습니다. 랭킹·거버넌스·티어 가중만 부여하며, 매도 압력을 줄여 공급을 흡수합니다. 만기 후 원금만 회수.",
+      "sinkTitle": "소비 소각 (BME)",
+      "sinkHead": "쓸수록 영구히 줄어든다",
+      "sinkBody": "소비 spend의 70%를 소각하고, 외부 매출의 일부(B2C 20% · B2B 30–40%)로 $ASSA를 매입해 영구 소각합니다.",
+      "ctaApp": "앱 열기",
+      "ctaPaper": "백서의 토크노믹스"
+    },
+    "market": {
+      "label": "마켓 & 시나리오",
+      "h1Pre": "팬덤은 시장이고,",
+      "h1Em": "시장은 수요를 만든다.",
+      "lede": "K-pop 팬덤 경제와 MagicSing 설치 기반 위에서, 락업·소각 수요가 채굴 공급을 흡수하는 구조입니다.",
+      "stat": {
+        "tam": "시장 규모 (TAM)",
+        "installs": "설치 기반",
+        "mau": "월간 활성 (MAU)",
+        "share": "목표 점유율"
+      },
+      "statsNote": "※ 지표는 추정치이며 확정 시 갱신됩니다.",
+      "scenarioLabel": "수요 / 공급 시나리오",
+      "scenarioAria": "수요와 공급 시나리오 곡선. 공급(채굴 emission)은 감소, 수요(락업·소각 흡수)는 증가하며 균형 전환점에서 교차.",
+      "scenarioNote": "※ 예시 모델 — 투자 권유가 아닙니다.",
+      "supply": "공급",
+      "demand": "수요",
+      "phase": "시점",
+      "crossover": "균형 전환",
+      "card": {
+        "demand": { "title": "수요 흡수", "body": "무이자 락업과 소비 소각이 유통량을 줄이며 매도 압력을 흡수합니다." },
+        "supply": { "title": "공급 스케줄", "body": "채굴 emission은 front-loaded로 초기에 많고 시간에 따라 감소합니다." },
+        "assumption": { "title": "시나리오 가정", "body": "보수적 전제 기반의 예시이며, 실제 결과를 보장하지 않습니다." }
+      },
+      "ctaPaper": "백서 전체 보기"
+    }
   }
 }

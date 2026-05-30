@@ -9,7 +9,7 @@ export default function Legal({ title }: Props) {
       <p className="eyebrow mb-4">ASSA WAVE</p>
       <h1 className="text-3xl md:text-4xl font-display mb-6">{title}</h1>
       <p className="text-ink-soft">
-        본 문서는 준비 중입니다. 법무 검토 후 게시됩니다. (후속 단계)
+        This document is in preparation and will be published after legal review.
       </p>
     </section>
   );
