@@ -24,3 +24,4 @@ out/
 .vscode/*
 !.vscode/settings.json
 .idea/
+.gstack/
