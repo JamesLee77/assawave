@@ -330,6 +330,7 @@ ASSAGovernor+Timelock(votes 소스 단일화 결정 §8-16 반영), PredictionMa
 15. **브랜드 계승** — [네이비+레드+골드, 골드 액센트 한정·WCAG AA] WS2 재작업 방지 위해 사전 확정.
 16. **votes 소스 단일화** — [**Phase1 토큰 votes dormant, 거버넌스는 veASSA만**(Phase3) 권고] 이중계표 방지. veASSA transfer revert(비전송)·ERC5805 호환 시점 결정.
 17. **세일 Pausable** — [purchase whenNotPaused 추가, claim/withdraw 정지 예외 권고] 스펙 §3.2 요구.
+18. **테스트넷 키 분리 정책** — [**프로젝트별 키 분리 권고**] ccm 테스트넷 키(`.phase2-rehearsal-keys.json`·`.carbon-oracle-keeper.json`)는 `.gitignore` 처리된 "throwaway·Sepolia 전용" 일회용 지갑이라 재사용해도 무가치하나, assawave **전용 deployer/keeper/admin 키를 신규 생성** 권장. 근거: 같은 체인(Base Sepolia `84532`)에서 컨트랙트 주소가 `(deployer, nonce)`로 결정되어 공유 시 nonce 뒤섞임 → **assawave 테스트넷 주소 재현 불가·레지스트리 혼선**, 그리고 blast radius 축소·감사추적 분리·메인넷 키 규율 사전 정착. **재사용 대상은 키가 아니라 설정/툴링** — Sepolia RPC(`sepolia.base.org`)·chainId `84532`·faucet·deploy/keeper 스크립트(`_*-keeper-*.ts`)·wrangler 구조·KYCRegistry 리허설 *패턴*(단 assawave는 자체 배포, ccm의 `0x9172…`를 가리키지 말 것). **하드 룰:** ① 테스트넷 키 ≠ 메인넷 키(절대) ② ccm `.env`/키 json을 assawave로 **복사 금지**(시크릿 sprawl) — 패턴만 참조, 키는 새로 생성 ③ mainnet Safe 서명자·deployer는 전용 하드웨어 키, 어떤 것과도 공유 금지. 예외: 개인 dev/QA 지갑(MetaMask로 Sepolia UI 클릭 테스트)은 양 프로젝트 공용 무해. *(관련: #9 Safe 구성·#11b KYC 온체인 반영 SLA. 키 생성·입력은 보안상 사용자가 직접 수행.)*
 
 ---
 
