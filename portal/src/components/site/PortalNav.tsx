@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
 import Wordmark from "../brand/Wordmark";
+import WalletButton from "./WalletButton";
 import ThemeToggle from "./ThemeToggle";
 
 type NavItem = { id: string; label: string; to: string };
@@ -79,11 +79,7 @@ export default function PortalNav() {
 
         <div className="flex items-center gap-4">
           <div className="hidden md:block">
-            <ConnectButton
-              chainStatus="icon"
-              showBalance={false}
-              accountStatus={{ smallScreen: "avatar", largeScreen: "address" }}
-            />
+            <WalletButton />
           </div>
 
           <ThemeToggle />
@@ -95,7 +91,7 @@ export default function PortalNav() {
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             className="md:hidden flex items-center justify-center border border-rule transition-colors hover:border-ink"
-            style={{ width: 36, height: 36, background: "transparent", cursor: "pointer", borderRadius: "8px" }}
+            style={{ width: 36, height: 36, background: "transparent", cursor: "pointer", borderRadius: "999px" }}
           >
             <svg
               width="18"
@@ -144,7 +140,7 @@ export default function PortalNav() {
               </NavLink>
             ))}
             <div className="px-6 pt-4 border-t border-rule mt-2">
-              <ConnectButton chainStatus="icon" showBalance={false} accountStatus="address" />
+              <WalletButton className="w-full justify-center px-5" />
             </div>
           </nav>
         </div>

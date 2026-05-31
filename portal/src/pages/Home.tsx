@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAccount, useReadContract } from "wagmi";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import WalletButton from "../components/site/WalletButton";
 import { formatUnits } from "viem";
 
 const ASSA_TOKEN_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
@@ -68,7 +68,7 @@ export default function Home() {
 
         {!isConnected && (
           <div className="flex justify-center pt-4">
-            <ConnectButton />
+            <WalletButton className="px-8" />
           </div>
         )}
       </header>

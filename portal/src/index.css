@@ -321,6 +321,13 @@ textarea {
 }
 [data-theme="light"] .btn-ghost:hover { color: var(--brand-on-light); }
 
+/* Keep RainbowKit-rendered buttons (connect/account modal) fully-round to match
+   the portal's pill button system. */
+[data-rk] {
+  --rk-radii-connectButton: 9999px;
+  --rk-radii-actionButton: 9999px;
+}
+
 /* focus-visible */
 :focus-visible {
   outline: 2px solid var(--brand-on-light);
