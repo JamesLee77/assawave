@@ -29,8 +29,10 @@ async function main() {
   banner("Deploy Gnosis Safe (2-of-3)");
   const [deployer] = await ethers.getSigners();
 
-  if ((await loadRegistry().contracts).Safe) {
-    console.log("  • Safe already in registry:", loadRegistry().contracts.Safe, "(delete it to redeploy)");
+  const existingSafe = loadRegistry().contracts.Safe;
+  if (existingSafe) {
+    console.log("  • Safe already in registry:", existingSafe, "— delete it from the registry to redeploy. Skipping.");
+    return;
   }
 
   const owners = [deployer.address];

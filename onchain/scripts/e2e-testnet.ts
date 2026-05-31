@@ -18,6 +18,7 @@
  * and lock withdrawal after expiry. Those are covered by the local Hardhat test suite.
  */
 import { ethers, network } from "hardhat";
+import type { Provider } from "ethers";
 import { loadRegistry, banner } from "./lib";
 import * as fs from "fs";
 import * as path from "path";
@@ -34,7 +35,7 @@ function approx(a: bigint, b: bigint, tolerance: bigint) {
   return (a > b ? a - b : b - a) <= tolerance;
 }
 
-function getTestWallet(provider: ethers.Provider) {
+function getTestWallet(provider: Provider) {
   let pk = process.env.TEST_PRIVATE_KEY;
   if (!pk) {
     const w = ethers.Wallet.createRandom();
