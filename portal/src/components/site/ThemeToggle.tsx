@@ -6,7 +6,7 @@ export default function ThemeToggle() {
     <button
       onClick={toggle}
       aria-label="Toggle theme"
-      className="flex items-center gap-1.5 px-2.5 py-1.5 border border-rule bg-transparent text-ink font-mono text-[10px] tracking-[0.14em] uppercase cursor-pointer hover:border-moss transition-colors"
+      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-rule bg-transparent text-ink font-mono text-[10px] tracking-[0.14em] uppercase cursor-pointer hover:border-brand transition-colors"
     >
       <svg
         width="14"

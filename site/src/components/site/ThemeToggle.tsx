@@ -8,7 +8,7 @@ export default function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className="hit-44 inline-flex items-center justify-center border border-rule text-ink hover:text-brand cursor-pointer transition-colors"
+      className="hit-44 inline-flex items-center justify-center rounded-full border border-rule text-ink hover:text-brand cursor-pointer transition-colors"
     >
       {/* 이모지 금지(원칙 #5) — 인라인 SVG (Lucide sun/moon) */}
       {isDark ? (
