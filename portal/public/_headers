@@ -5,6 +5,15 @@
 # wallet-vendor URLs that drift over time. Strict on script-src (self + inline)
 # and object-src (none) is what blocks the actually-dangerous classes (XSS via
 # script injection, Flash/Java).
+#
+# Known, intentional consequence: script-src 'self' 'unsafe-inline' BLOCKS the
+# cross-origin Cloudflare Web Analytics beacon (static.cloudflareinsights.com),
+# so CF Web Analytics does NOT track the portal (the console logs a CSP
+# violation for beacon.min.js on every load). This is a deliberate tradeoff, not
+# a misconfiguration — a tight script-src matters more on a wallet-connecting
+# portal than one analytics beacon. The landing site (no CSP) keeps its CF
+# analytics. To enable portal analytics, add https://static.cloudflareinsights.com
+# to script-src below.
 
 /*
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
