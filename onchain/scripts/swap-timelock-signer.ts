@@ -44,10 +44,11 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   const tl = await ethers.getContractAt("ASSATimelock", c.ASSATimelock);
 
-  // Real Safe via SAFE_ADDRESS, else a generated EOA stand-in (also usable for the proof).
-  const mock = process.env.SAFE_ADDRESS ? undefined : getMockSafe(ethers.provider);
-  const safeAddr = process.env.SAFE_ADDRESS ?? mock!.address;
-  console.log(`  deployer: ${deployer.address}\n  timelock: ${c.ASSATimelock}\n  Safe:     ${safeAddr}${mock ? " (mock stand-in)" : ""}`);
+  // Target Safe: SAFE_ADDRESS env > registry "Safe" (real deployed multisig) > generated EOA stand-in.
+  const realSafe = process.env.SAFE_ADDRESS ?? c.Safe;
+  const mock = realSafe ? undefined : getMockSafe(ethers.provider);
+  const safeAddr = realSafe ?? mock!.address;
+  console.log(`  deployer: ${deployer.address}\n  timelock: ${c.ASSATimelock}\n  Safe:     ${safeAddr}${mock ? " (mock stand-in)" : " (real multisig)"}`);
 
   const PROPOSER = await tl.PROPOSER_ROLE();
   const EXECUTOR = await tl.EXECUTOR_ROLE();
@@ -64,13 +65,20 @@ async function main() {
     } else console.log(`  • ${n} already held by Safe`);
   }
 
-  // 2. revoke from deployer
-  console.log("\n[2] revoke proposer/executor/canceller from deployer");
+  // 2. revoke from previous holders (deployer + any prior EOA stand-in), never the new Safe
+  console.log("\n[2] revoke proposer/executor/canceller from previous holders");
+  const oldHolders = new Map<string, string>([[deployer.address, "deployer"]]);
+  if (process.env.SAFE_PRIVATE_KEY) {
+    const prev = new ethers.Wallet(process.env.SAFE_PRIVATE_KEY).address;
+    if (prev.toLowerCase() !== safeAddr.toLowerCase()) oldHolders.set(prev, "prev stand-in");
+  }
   for (const [n, role] of roles) {
-    if (await tl.hasRole(role, deployer.address)) {
-      await (await tl.revokeRole(role, deployer.address)).wait();
-      console.log(`  revoke ${n} from deployer`);
-    } else console.log(`  • ${n} already revoked from deployer`);
+    for (const [holder, label] of oldHolders) {
+      if (await tl.hasRole(role, holder)) {
+        await (await tl.revokeRole(role, holder)).wait();
+        console.log(`  revoke ${n} from ${label}`);
+      }
+    }
   }
 
   // 3. optional: hand the Timelock's own DEFAULT_ADMIN to the Safe
@@ -87,11 +95,12 @@ async function main() {
   console.log("\n[4] role matrix");
   let ok = true;
   for (const [n, role] of roles) {
-    const dep = await tl.hasRole(role, deployer.address);
     const sf = await tl.hasRole(role, safeAddr);
-    const good = !dep && sf;
+    let prevCleared = true;
+    for (const [holder] of oldHolders) if (await tl.hasRole(role, holder)) prevCleared = false;
+    const good = prevCleared && sf;
     ok = ok && good;
-    console.log(`  ${good ? "✓" : "✗"} ${n}: deployer=${dep} safe=${sf}`);
+    console.log(`  ${good ? "✓" : "✗"} ${n}: safe=${sf} prevHoldersCleared=${prevCleared}`);
   }
 
   // functional proof (no state change): deployer can no longer schedule; Safe can.
