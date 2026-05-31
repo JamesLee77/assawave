@@ -26,6 +26,7 @@
     "configure:sepolia": "hardhat run scripts/configure-testnet.ts --network baseSepolia",
     "e2e:sepolia": "hardhat run scripts/e2e-testnet.ts --network baseSepolia",
     "verify:sepolia": "hardhat verify --network baseSepolia",
+    "verify:all:sepolia": "hardhat run scripts/verify-sepolia.ts --network baseSepolia",
     "verify:mainnet": "hardhat verify --network base",
     "node": "hardhat node",
     "clean": "hardhat clean"
