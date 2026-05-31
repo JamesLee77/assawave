@@ -54,7 +54,7 @@ export default function Legal({ title }: Props) {
 
           <div className="flex flex-col gap-3 w-full md:w-auto flex-shrink-0">
             <a 
-              href="https://ccd84823.assawave-portal.pages.dev" 
+              href="https://app.assawave.io"
               className="btn-primary w-full md:w-auto text-center justify-center text-[13px] font-semibold px-6"
             >
               Open Investor Portal &rarr;
