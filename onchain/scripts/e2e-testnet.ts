@@ -114,20 +114,27 @@ async function main() {
   console.log("\n[3] sale purchase");
   const cost = await sale.quoteUsdc(0, BUY);
   const usdcBefore = await usdc.balanceOf(test.address);
+  // Rerun-safe: the persisted wallet keeps its prior allocation, so assert the
+  // delta THIS run's purchase adds, not an absolute total.
+  const allocBefore = (await sale.allocations(0, test.address)).totalAllocated;
+  const firstBuy = allocBefore === 0n;
   await (await usdc.connect(test).approve(c.TokenSale, cost)).wait();
   await (await sale.connect(test).purchase(0, BUY)).wait();
   const alloc = await sale.allocations(0, test.address);
-  check("allocation recorded", alloc.totalAllocated === BUY, `${ethers.formatUnits(alloc.totalAllocated, 18)} ASSA`);
+  check("purchase added BUY to allocation", alloc.totalAllocated - allocBefore === BUY, `+2000 → ${ethers.formatUnits(alloc.totalAllocated, 18)} ASSA total`);
   check("USDC charged (100)", usdcBefore - (await usdc.balanceOf(test.address)) === cost, `${ethers.formatUnits(cost, 6)} USDC`);
 
   // ── 4. Sale: claim TGE (user) ───────────────────────────────────────────────
   console.log("\n[4] sale claim (TGE 10%)");
   const claimable = await sale.claimable(0, test.address);
   const assaBefore4 = await assa.balanceOf(test.address);
-  await (await sale.connect(test).claim(0)).wait();
+  if (claimable > 0n) await (await sale.connect(test).claim(0)).wait();
   const got4 = (await assa.balanceOf(test.address)) - assaBefore4;
-  check("TGE ~10% claimable", approx(claimable, A("200"), A("1")), `${ethers.formatUnits(claimable, 18)} ASSA`);
-  check("claim delivered TGE", approx(got4, A("200"), A("1")), `${ethers.formatUnits(got4, 18)} ASSA`);
+  // Only the first run sees a clean ~200 TGE; later runs see TGE on the new BUY
+  // plus accrued linear. The invariant that always holds: claim pays out what
+  // was claimable (±1 ASSA for the second of linear accrual between read & mine).
+  if (firstBuy) check("TGE ~10% claimable", approx(claimable, A("200"), A("1")), `${ethers.formatUnits(claimable, 18)} ASSA`);
+  check("claim delivered all claimable", approx(got4, claimable, A("1")), `${ethers.formatUnits(got4, 18)} ASSA`);
 
   // ── 5. Stake: lock for veASSA (user) ────────────────────────────────────────
   console.log("\n[5] veASSA lock");
@@ -146,17 +153,21 @@ async function main() {
 
   // ── 6. Vesting: create schedule + release TGE (admin then user) ─────────────
   console.log("\n[6] vesting schedule + release (TGE 10%)");
-  if ((await vesting.scheduleCountOf(test.address)) === 0n) {
+  const freshSchedule = (await vesting.scheduleCountOf(test.address)) === 0n;
+  if (freshSchedule) {
     await (await vesting.createSchedule(test.address, VEST_TOTAL, 1000, 0, 6 * MONTH, false, 2)).wait();
   }
   const ids = await vesting.scheduleIdsOf(test.address);
   const sid = ids[ids.length - 1];
   const releasable = await vesting.releasable(sid);
   const assaBefore6 = await assa.balanceOf(test.address);
-  await (await vesting.connect(test).release(sid)).wait();
+  if (releasable > 0n) await (await vesting.connect(test).release(sid)).wait();
   const got6 = (await assa.balanceOf(test.address)) - assaBefore6;
-  check("schedule TGE ~100k releasable", approx(releasable, A("100000"), A("10")), `${ethers.formatUnits(releasable, 18)} ASSA`);
-  check("release delivered TGE", approx(got6, A("100000"), A("10")), `${ethers.formatUnits(got6, 18)} ASSA`);
+  // The big ~100k TGE only releases once (fresh schedule). On reruns the same
+  // schedule is reused, so only the linear delta since the last release is due —
+  // the always-true invariant is that release pays out whatever was releasable.
+  if (freshSchedule) check("schedule TGE ~100k releasable", approx(releasable, A("100000"), A("10")), `${ethers.formatUnits(releasable, 18)} ASSA`);
+  check("release delivered all releasable", approx(got6, releasable, A("1")), `${ethers.formatUnits(got6, 18)} ASSA`);
 
   // ── Summary ─────────────────────────────────────────────────────────────────
   console.log("\n" + "─".repeat(60));
