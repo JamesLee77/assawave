@@ -34,7 +34,8 @@
     "verify:mainnet": "hardhat verify --network base",
     "node": "hardhat node",
     "clean": "hardhat clean",
-    "gov:demo:sepolia": "hardhat run scripts/gov-demo-sepolia.ts --network baseSepolia"
+    "gov:demo:sepolia": "hardhat run scripts/gov-demo-sepolia.ts --network baseSepolia",
+    "execute:old:sepolia": "hardhat run scripts/execute-old-op.ts --network baseSepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
