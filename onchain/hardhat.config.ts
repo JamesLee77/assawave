@@ -8,11 +8,16 @@ import * as path from "path";
 // The repo root is one directory up from this config file.
 dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
 
-const PRIVATE_KEY = process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000001";
+// Unfunded throwaway key used only as a safe placeholder so config parsing and
+// compile/test never require a real key. It owns no funds on any chain.
+const DUMMY_KEY = "0x0000000000000000000000000000000000000000000000000000000000000001";
+const PRIVATE_KEY = process.env.PRIVATE_KEY || DUMMY_KEY;
 // Mainnet uses a separate key namespace (MAINNET_PRIVATE_KEY) so testnet
-// activity can't accidentally sign mainnet transactions. Falls back to
-// PRIVATE_KEY if not set, preserving existing testnet-only configs.
-const MAINNET_PRIVATE_KEY = process.env.MAINNET_PRIVATE_KEY || PRIVATE_KEY;
+// activity can never sign mainnet transactions. When it is unset we fall back to
+// DUMMY_KEY — NOT the testnet PRIVATE_KEY — so a forgotten mainnet key fails at
+// broadcast (unfunded address) instead of silently signing Base mainnet with the
+// reused testnet deployer.
+const MAINNET_PRIVATE_KEY = process.env.MAINNET_PRIVATE_KEY || DUMMY_KEY;
 const BASE_SEPOLIA_RPC = process.env.BASE_SEPOLIA_RPC || "https://sepolia.base.org";
 const BASE_MAINNET_RPC = process.env.BASE_MAINNET_RPC || "https://mainnet.base.org";
 const BASESCAN_API_KEY = process.env.BASESCAN_API_KEY || "";
