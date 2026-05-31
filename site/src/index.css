@@ -399,6 +399,40 @@ textarea {
   color: #ffffff;
 }
 
+/* Wallet CTA — pill, brand-outlined. Shares the fully-round shape of every other
+   button but stays visually distinct from the filled .btn-primary (Open App)
+   via a brand-tinted rim. Used by WalletButton (RainbowKit Custom render). */
+.btn-wallet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border-radius: 999px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--brand) 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 50%, transparent);
+  transition: box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+.btn-wallet:hover {
+  background: color-mix(in srgb, var(--brand) 16%, transparent);
+  box-shadow: inset 0 0 0 1px var(--brand);
+  color: var(--brand-on-dark);
+  transform: translateY(-1px);
+}
+[data-theme="light"] .btn-wallet:hover { color: var(--brand-on-light); }
+/* Wrong-network state — solid brand to demand attention. */
+.btn-wallet--warn {
+  color: #ffffff;
+  background: var(--brand-pressed);
+  box-shadow: 0 8px 30px -12px rgba(239, 37, 37, 0.7);
+}
+
+/* Keep RainbowKit-rendered buttons (modal) fully-round for shape consistency. */
+[data-rk] {
+  --rk-radii-connectButton: 9999px;
+  --rk-radii-actionButton: 9999px;
+}
+
 /* ▶ play triangle (CTA) */
 .tri {
   width: 0; height: 0;

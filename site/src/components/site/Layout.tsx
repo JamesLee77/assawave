@@ -1,6 +1,6 @@
 import { Link, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import WalletButton from "./WalletButton";
 import WaveMark from "../brand/WaveMark";
 import ThemeToggle from "./ThemeToggle";
 
@@ -45,7 +45,7 @@ export default function Layout() {
             ))}
           </nav>
           <div className="flex items-center gap-3">
-            <ConnectButton chainStatus="icon" showBalance={false} />
+            <WalletButton />
             <a
               href={APP_URL}
               className="btn-primary hidden sm:inline-flex px-5 text-[13px] font-semibold tracking-wide"
