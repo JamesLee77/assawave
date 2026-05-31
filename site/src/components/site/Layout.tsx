@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import WalletButton from "./WalletButton";
@@ -12,6 +13,7 @@ const APP_URL = import.meta.env.VITE_APP_URL || "https://app.assawave.io";
  */
 export default function Layout() {
   const { t } = useTranslation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // 단일 네비 — 실제 섹션 앵커로 직접 연결(섹션 nav 별도 바 불필요).
   const NAV = [
@@ -20,6 +22,19 @@ export default function Layout() {
     { id: "market", label: t("home:anchors.market") },
     { id: "roadmap", label: t("home:anchors.roadmap") },
   ];
+
+  // Mobile drawer: lock body scroll while open + close on Escape (parity with portal PortalNav).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
 
   return (
     <div className="min-h-screen bg-paper text-ink flex flex-col relative">
@@ -45,25 +60,75 @@ export default function Layout() {
             ))}
           </nav>
           <div className="flex items-center gap-3">
-            <WalletButton className="whitespace-nowrap" />
-            {/* Open App is hidden on phones to declutter the header (logo + Connect
-                Wallet + toggle alone fit 375px without the wallet label wrapping).
-                The responsive toggle lives on this plain wrapper span, NOT on the
-                <a>: `.btn-primary` sets `display` as unlayered CSS, which beats
-                Tailwind v4's utilities layer, so a `hidden` on the link itself is
-                ignored. Portal stays reachable on mobile via the in-page/footer CTAs;
-                Open App returns in the header at md+. */}
-            <span className="hidden md:inline-flex">
+            {/* Desktop CTAs grouped in a PLAIN wrapper so the `hidden` utility applies
+                — it would be silently overridden if placed on the .btn-primary itself
+                (unlayered CSS beats Tailwind v4's utilities layer). On mobile these
+                move into the drawer below, keeping the header to logo + toggle + menu. */}
+            <div className="hidden md:flex items-center gap-3">
+              <WalletButton className="whitespace-nowrap" />
               <a
                 href={APP_URL}
-                className="btn-primary px-5 text-[13px] font-semibold tracking-wide"
+                className="btn-primary inline-flex px-5 text-[13px] font-semibold tracking-wide"
               >
                 {t("nav:app")}
               </a>
-            </span>
+            </div>
             <ThemeToggle />
+            {/* Mobile hamburger — parity with the portal's PortalNav drawer. */}
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-menu"
+              className="md:hidden inline-flex items-center justify-center rounded-full border border-rule text-ink hover:border-ink transition-colors"
+              style={{ width: 40, height: 40 }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                {menuOpen ? (
+                  <>
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                  </>
+                ) : (
+                  <>
+                    <line x1="4" y1="7" x2="20" y2="7" />
+                    <line x1="4" y1="12" x2="20" y2="12" />
+                    <line x1="4" y1="17" x2="20" y2="17" />
+                  </>
+                )}
+              </svg>
+            </button>
           </div>
         </div>
+
+        {/* Mobile drawer — section anchors + CTAs, closes on selection. */}
+        {menuOpen ? (
+          <div id="mobile-menu" className="md:hidden border-t border-rule" style={{ background: "var(--paper)" }}>
+            <nav className="mx-auto max-w-7xl px-5 py-3 flex flex-col" aria-label="Mobile">
+              {NAV.map((n) => (
+                <a
+                  key={n.id}
+                  href={`/#${n.id}`}
+                  onClick={() => setMenuOpen(false)}
+                  className="nav-link block py-3.5 border-b border-rule"
+                >
+                  {n.label}
+                </a>
+              ))}
+              <div className="flex flex-col gap-3 pt-4 pb-1">
+                <a
+                  href={APP_URL}
+                  onClick={() => setMenuOpen(false)}
+                  className="btn-primary inline-flex w-full justify-center px-5 py-3 text-[14px] font-semibold tracking-wide"
+                >
+                  {t("nav:app")}
+                </a>
+                <WalletButton className="w-full justify-center whitespace-nowrap" />
+              </div>
+            </nav>
+          </div>
+        ) : null}
       </header>
 
       <main className="flex-1">
