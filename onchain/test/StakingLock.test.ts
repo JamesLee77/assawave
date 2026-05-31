@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import type { FunctionFragment } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { ASSAToken, StakingLock, BMEBurner, MockUSDC, MockDexRouter } from "../typechain-types";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -215,8 +216,9 @@ describe("ASSA WAVE Smart Contracts Suite", () => {
       
       for (const fragment of abi) {
         if (fragment.type === "function") {
+          const fn = fragment as FunctionFragment;
           for (const keyword of rewardKeywords) {
-            expect(fragment.name.toLowerCase()).to.not.contain(keyword.toLowerCase());
+            expect(fn.name.toLowerCase()).to.not.contain(keyword.toLowerCase());
           }
         }
       }
