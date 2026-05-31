@@ -1,6 +1,6 @@
 import { formatUnits } from "viem";
 
-export function fmtCCM(n: bigint | undefined, dp = 4): string {
+export function fmtASSA(n: bigint | undefined, dp = 4): string {
   if (n === undefined) return "—";
   const s = formatUnits(n, 18);
   // round to dp decimal places without trailing zeros for cleanliness

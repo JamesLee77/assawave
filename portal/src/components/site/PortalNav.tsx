@@ -11,7 +11,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: "stake", label: "Lockup & Stake", to: "/stake" },
   { id: "sale", label: "SAFT Sale", to: "/sale" },
   { id: "vesting", label: "Vesting Claims", to: "/vesting" },
-  { id: "migrate", label: "Migration", to: "/migrate" },
   { id: "settings", label: "Settings", to: "/settings" },
 ];
 

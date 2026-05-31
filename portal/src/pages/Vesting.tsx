@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAccount, usePublicClient, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { CONTRACTS, CCMVestingAbi } from "../lib/contracts";
-import { fmtCCM } from "../lib/format";
+import { CONTRACTS, TokenVestingAbi } from "../lib/contracts";
+import { fmtASSA } from "../lib/format";
 import { Card, CTA, H1, H3, Lede, SectionLabel } from "../components/site/primitives";
 
-const vest = CONTRACTS.ccmVesting;
+const vest = CONTRACTS.tokenVesting;
 
 interface ScheduleData {
   id: bigint;
   beneficiary: string;
-  totalAmount: bigint;
-  startTime: bigint;
-  cliffDuration: bigint;
-  vestingDuration: bigint;
-  released: bigint;
+  total: bigint;
+  start: bigint;
+  cliff: bigint;
+  duration: bigint;
+  claimed: bigint;
   revocable: boolean;
   revoked: boolean;
   releasable: bigint;
@@ -40,27 +40,23 @@ export default function Vesting() {
     setLoading(true);
     (async () => {
       try {
-        const ids: bigint[] = [];
-        for (let i = 0n; i < 50n; i++) {
-          try {
-            const id = (await client.readContract({
-              address: vest, abi: CCMVestingAbi, functionName: "scheduleIdsOf", args: [address, i],
-            })) as bigint;
-            ids.push(id);
-          } catch { break; }
-        }
+        // scheduleIdsOf now returns the whole id array in one call.
+        const ids = (await client.readContract({
+          address: vest, abi: TokenVestingAbi, functionName: "scheduleIdsOf", args: [address],
+        })) as readonly bigint[];
+
         const out: ScheduleData[] = [];
         for (const id of ids) {
+          // schedules(id) => [beneficiary, total, claimed, start, cliff, duration, tgeBps, category, revocable, revoked]
           const s = (await client.readContract({
-            address: vest, abi: CCMVestingAbi, functionName: "schedules", args: [id],
-          })) as readonly [string, bigint, bigint, bigint, bigint, bigint, boolean, boolean];
+            address: vest, abi: TokenVestingAbi, functionName: "schedules", args: [id],
+          })) as readonly [string, bigint, bigint, bigint, bigint, bigint, number, number, boolean, boolean];
           const r = (await client.readContract({
-            address: vest, abi: CCMVestingAbi, functionName: "releasable", args: [id],
+            address: vest, abi: TokenVestingAbi, functionName: "releasable", args: [id],
           })) as bigint;
           out.push({
-            id, beneficiary: s[0], totalAmount: s[1], startTime: s[2],
-            cliffDuration: s[3], vestingDuration: s[4], released: s[5],
-            revocable: s[6], revoked: s[7], releasable: r,
+            id, beneficiary: s[0], total: s[1], claimed: s[2], start: s[3],
+            cliff: s[4], duration: s[5], revocable: s[8], revoked: s[9], releasable: r,
           });
         }
         setSchedules(out);
@@ -95,10 +91,11 @@ export default function Vesting() {
 
       <div className="space-y-4">
         {schedules.map((s) => {
-          const start = new Date(Number(s.startTime) * 1000);
-          const cliffEnd = new Date(Number(s.startTime + s.cliffDuration) * 1000);
-          const end = new Date(Number(s.startTime + s.vestingDuration) * 1000);
-          const pct = s.totalAmount > 0n ? Number((s.released * 10000n) / s.totalAmount) / 100 : 0;
+          const start = new Date(Number(s.start) * 1000);
+          const cliffEnd = new Date(Number(s.start + s.cliff) * 1000);
+          // Fully vested = start + cliff + duration (duration is the post-cliff linear window).
+          const end = new Date(Number(s.start + s.cliff + s.duration) * 1000);
+          const pct = s.total > 0n ? Number((s.claimed * 10000n) / s.total) / 100 : 0;
           const canRelease = s.releasable > 0n && !s.revoked;
 
           return (
@@ -126,9 +123,9 @@ export default function Vesting() {
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 mb-5">
-                <Field label={t("vesting:fields.total")} value={`${fmtCCM(s.totalAmount)} CCM`} />
-                <Field label={t("vesting:fields.released")} value={`${fmtCCM(s.released)} CCM (${pct.toFixed(1)}%)`} />
-                <Field label={t("vesting:fields.releasable")} value={`${fmtCCM(s.releasable)} CCM`} accent />
+                <Field label={t("vesting:fields.total")} value={`${fmtASSA(s.total)} ASSA`} />
+                <Field label={t("vesting:fields.released")} value={`${fmtASSA(s.claimed)} ASSA (${pct.toFixed(1)}%)`} />
+                <Field label={t("vesting:fields.releasable")} value={`${fmtASSA(s.releasable)} ASSA`} accent />
                 <Field label={t("vesting:fields.start")} value={start.toLocaleString()} />
                 <Field label={t("vesting:fields.cliffEnds")} value={cliffEnd.toLocaleString()} />
                 <Field label={t("vesting:fields.fullyVested")} value={end.toLocaleString()} />
@@ -140,13 +137,13 @@ export default function Vesting() {
                     ? t("vesting:awaitingWallet")
                     : isConfirming
                       ? t("vesting:confirming")
-                      : t("vesting:release", { amount: fmtCCM(s.releasable) })
+                      : t("vesting:release", { amount: fmtASSA(s.releasable) })
                 }
                 disabled={!canRelease || isPending || isConfirming}
                 onClick={() =>
                   writeContract({
                     address: vest,
-                    abi: CCMVestingAbi,
+                    abi: TokenVestingAbi,
                     functionName: "release",
                     args: [s.id],
                   })

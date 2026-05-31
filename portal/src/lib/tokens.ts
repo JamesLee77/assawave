@@ -31,7 +31,7 @@ export interface Tokens {
   /** 차트/데이터 시각화 전용 중립 다색 — brand red 미포함 */
   data: readonly string[];
 
-  // ─── Legacy CCM mappings for absolute safety ───
+  // ─── Legacy design-system accent mappings (moss/clay) kept for safety ───
   moss: string;
   moss2: string;
   clay: string;

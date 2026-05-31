@@ -1,5 +1,4 @@
-// Wordmark glyph helpers — ported verbatim from
-// docs/design/design_handoff_ccm_network/design_reference/brand/bi-system.jsx
+// Wordmark glyph helpers — ported from the brand BI system reference.
 //
 // "u" = unit; canonical UNIT box is 100u tall × 240u wide.
 // x-height: 56u (top 22 → bottom 78), stroke 10u, cap 72u.

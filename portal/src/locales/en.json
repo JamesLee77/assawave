@@ -13,20 +13,19 @@
     "sale": "Sale",
     "dashboard": "Dashboard",
     "vesting": "Vesting",
-    "settings": "Settings",
-    "migrate": "Migrate"
+    "settings": "Settings"
   },
   "home": {
-    "title": "CCM Network Investor Portal",
-    "subtitle": "SAFT investor portal on Base mainnet. Connect your wallet to view your vesting schedule, claim vested tokens, and (if Phase 1 requires) migrate v1 → v2 after audit."
+    "title": "ASSA WAVE Investor Portal",
+    "subtitle": "SAFT investor portal on Base. Connect your wallet to view your vesting schedule, lock $ASSA for veASSA voting weight, and claim vested tokens."
   },
   "dashboard": {
     "title": "Dashboard",
     "cards": {
-      "totalBalance": "Total CCM",
+      "totalBalance": "Total ASSA",
       "nextUnlock": "Next Unlock",
       "claimable": "Currently Claimable",
-      "migration": "Migration Status"
+      "votingPower": "veASSA Voting Power"
     },
     "noNextUnlock": "No upcoming unlocks",
     "recentActivity": "Recent activity",
@@ -34,9 +33,9 @@
   },
   "vesting": {
     "title": "Your vesting schedules",
-    "subtitle": "SAFT allocations are locked in CCMVesting until the cliff date, then release linearly over the vesting period. Use Release to claim the currently-vested portion.",
+    "subtitle": "SAFT allocations are locked in TokenVesting until the cliff date, then release with the TGE portion plus linear vesting. Use Release to claim the currently-vested portion.",
     "noSchedules": "No vesting schedules found for this address.",
-    "release": "Release {{amount}} CCM",
+    "release": "Release {{amount}} ASSA",
     "awaitingWallet": "Awaiting wallet…",
     "confirming": "Confirming…",
     "fields": {
@@ -64,7 +63,7 @@
     },
     "email": {
       "title": "Email notifications",
-      "description": "Get notified when your CCM cliff ends or new tokens are claimable.",
+      "description": "Get notified when your ASSA cliff ends or new tokens are claimable.",
       "placeholder": "you@example.com",
       "subscribe": "Subscribe",
       "subscribed": "Subscribed as",
@@ -84,9 +83,5 @@
     },
     "verified": "Email verified.",
     "verifyError": "Verification link is invalid or expired."
-  },
-  "migrate": {
-    "title": "Migrate v1 → v2",
-    "description": "Available only if Phase 0.5 audit identifies a critical fix and a v2 token contract is deployed. Burns your v1 CCM and mints the same amount of v2 CCM 1:1 (or with a documented bonus). The portal disables this page automatically when migration is closed."
   }
 }

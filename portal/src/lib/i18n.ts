@@ -11,9 +11,9 @@ void i18n
     supportedLngs: ["en"], // expand here when locales are translated (e.g. "ko", "ja")
     resources: {
       en: { translation: en.common, common: en.common, nav: en.nav, home: en.home,
-            dashboard: en.dashboard, vesting: en.vesting, settings: en.settings, migrate: en.migrate },
+            dashboard: en.dashboard, vesting: en.vesting, settings: en.settings },
     },
-    ns: ["common", "nav", "home", "dashboard", "vesting", "settings", "migrate"],
+    ns: ["common", "nav", "home", "dashboard", "vesting", "settings"],
     defaultNS: "common",
     interpolation: { escapeValue: false },
   });

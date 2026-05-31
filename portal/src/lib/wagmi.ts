@@ -5,8 +5,8 @@ import { IS_MAINNET } from "./env";
 
 /**
  * SAFT investor portal — single-chain per build.
- *  - portal.ccmnetwork.net          (VITE_ENV=mainnet) → only Base mainnet
- *  - portal-testnet.ccmnetwork.net  (VITE_ENV=testnet) → only Base Sepolia
+ *  - app.assawave.io          (VITE_ENV=mainnet) → only Base mainnet
+ *  - app-testnet.assawave.io  (VITE_ENV=testnet) → only Base Sepolia
  *
  * Mirrors the operator console split (admin/admin-testnet). Build-time
  * chain pinning eliminates "wrong network" footguns and lets the

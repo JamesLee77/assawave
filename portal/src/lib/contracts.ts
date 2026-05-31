@@ -1,12 +1,16 @@
 /**
- * Deployed CCM contract addresses + minimal ABIs.
+ * Deployed ASSA WAVE contract addresses + minimal ABIs.
  *
  * Env-driven: VITE_ENV=mainnet → Base mainnet contracts;
- * VITE_ENV=testnet → Base Sepolia rehearsal contracts.
+ * VITE_ENV=testnet → Base Sepolia contracts.
  *
- * The investor-facing surface is split into two sites with single-chain
- * builds (portal.ccmnetwork.net + portal-testnet.ccmnetwork.net) so the
- * SAFT investor never has to wonder which chain they're on.
+ * The investor-facing surface is split into two single-chain builds
+ * (app.assawave.io + app-testnet.assawave.io) so an investor never has to
+ * wonder which chain they're on.
+ *
+ * ⚠️ Addresses are filled AFTER deployment from onchain/deployments/<network>.json.
+ *    Phase-1 contracts deploy to Base Sepolia first (audit gate), then mainnet.
+ *    Until then they are the zero address and the UI shows a "not yet live" state.
  */
 import type { Address } from "viem";
 import { ADMIN_CHAIN_ID, ADMIN_EXPLORER, IS_MAINNET } from "./env";
@@ -14,24 +18,29 @@ import { ADMIN_CHAIN_ID, ADMIN_EXPLORER, IS_MAINNET } from "./env";
 const ZERO = "0x0000000000000000000000000000000000000000" as Address;
 
 const CONTRACTS_MAINNET = {
-  // Phase 1 mainnet deploy (2026-05-12, see onchain/DEPLOYMENT.md):
-  ccmTokenV1: "0x398b2eB83C59890a01418b8D661e9A36a7c9d23d" as Address,
-  ccmVesting: "0x019B68683a8c31f4A8295215D8Da7f8Ec95582dc" as Address,
-  // Deferred to Phase 2/3:
-  ccmTgeSale: ZERO,
+  // Fill from onchain/deployments/base.json after Audit #1/#2 + mainnet deploy:
+  assaToken: ZERO,
+  tokenSale: ZERO,
+  tokenVesting: ZERO,
+  stakingLock: ZERO,
+  bmeBurner: ZERO,
+  kycRegistry: ZERO,
+  treasury: ZERO,
+  timelock: ZERO,
   usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as Address, // canonical Base USDC
-  // Set only if audit triggers a v2 (Phase 1):
-  ccmTokenV2: ZERO,
-  ccmMigration: ZERO,
 };
 
 const CONTRACTS_TESTNET = {
-  ccmTokenV1: "0x5641d6A2a6AD2B835b37489c72D2Bd716903CEFD" as Address,
-  ccmVesting: "0x0b04C87D925C35C71Ff736ceCc6A78c8EB28023F" as Address,
-  ccmTgeSale: "0x487eb25aBE20C85d55695eBD0eA2275C5bdD1745" as Address,
-  usdc: "0x87D1726B81095257A9ed70Aa1e67AA740bE485B6" as Address, // CCMSandboxUSDC
-  ccmTokenV2: ZERO,
-  ccmMigration: ZERO,
+  // Fill from onchain/deployments/baseSepolia.json after testnet deploy:
+  assaToken: ZERO,
+  tokenSale: ZERO,
+  tokenVesting: ZERO,
+  stakingLock: ZERO,
+  bmeBurner: ZERO,
+  kycRegistry: ZERO,
+  treasury: ZERO,
+  timelock: ZERO,
+  usdc: ZERO, // Sandbox USDC (set after deploy)
 };
 
 /** Active contract set — pinned by build env. */
@@ -43,9 +52,12 @@ export const CHAIN_ID = ADMIN_CHAIN_ID;
 /** Active block explorer base URL. */
 export const EXPLORER = ADMIN_EXPLORER;
 
-// ===================== ABIs (minimal) =====================
+/** True once real addresses are wired in (zero address = contract not live yet). */
+export const CONTRACTS_LIVE = CONTRACTS.assaToken !== ZERO;
 
-export const CCMTokenAbi = [
+// ===================== ASSAToken =====================
+
+export const ASSATokenAbi = [
   { type: "function", name: "name", inputs: [], outputs: [{ type: "string" }], stateMutability: "view" },
   { type: "function", name: "symbol", inputs: [], outputs: [{ type: "string" }], stateMutability: "view" },
   { type: "function", name: "decimals", inputs: [], outputs: [{ type: "uint8" }], stateMutability: "view" },
@@ -54,51 +66,17 @@ export const CCMTokenAbi = [
   { type: "function", name: "allowance", inputs: [{ type: "address" }, { type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
   { type: "function", name: "approve", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "bool" }], stateMutability: "nonpayable" },
   { type: "function", name: "transfer", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "bool" }], stateMutability: "nonpayable" },
-  { type: "function", name: "VERSION", inputs: [], outputs: [{ type: "string" }], stateMutability: "view" },
-  { type: "function", name: "cap", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
-  { type: "function", name: "paused", inputs: [], outputs: [{ type: "bool" }], stateMutability: "view" },
+  { type: "function", name: "CAP", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "getVotes", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "delegate", inputs: [{ type: "address" }], outputs: [], stateMutability: "nonpayable" },
 ] as const;
 
-export const CCMVestingAbi = [
-  {
-    type: "function",
-    name: "schedules",
-    inputs: [{ type: "uint256" }],
-    outputs: [
-      { name: "beneficiary", type: "address" },
-      { name: "totalAmount", type: "uint256" },
-      { name: "startTime", type: "uint256" },
-      { name: "cliffDuration", type: "uint256" },
-      { name: "vestingDuration", type: "uint256" },
-      { name: "released", type: "uint256" },
-      { name: "revocable", type: "bool" },
-      { name: "revoked", type: "bool" },
-    ],
-    stateMutability: "view",
-  },
-  { type: "function", name: "scheduleIdsOf", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
-  { type: "function", name: "releasable", inputs: [{ type: "uint256" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
-  { type: "function", name: "release", inputs: [{ type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
-  { type: "function", name: "releaseAll", inputs: [], outputs: [], stateMutability: "nonpayable" },
-  { type: "function", name: "getScheduleCount", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
-] as const;
+// ===================== TokenSale =====================
 
-export const CCMMigrationAbi = [
-  { type: "function", name: "migrate", inputs: [{ type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
-  { type: "function", name: "totalMigrated", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
-  { type: "function", name: "migratedBy", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
-  { type: "function", name: "deadline", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
-  { type: "function", name: "paused", inputs: [], outputs: [{ type: "bool" }], stateMutability: "view" },
-  { type: "function", name: "closed", inputs: [], outputs: [{ type: "bool" }], stateMutability: "view" },
-  { type: "function", name: "bonusBps", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
-] as const;
-
-// ===================== CCMTGESale ABI =====================
-
-export const CCMTGESaleAbi = [
-  // ── reads
-  { type: "function", name: "ccm", inputs: [], outputs: [{ type: "address" }], stateMutability: "view" },
-  { type: "function", name: "usdc", inputs: [], outputs: [{ type: "address" }], stateMutability: "view" },
+export const TokenSaleAbi = [
+  // reads
+  { type: "function", name: "assaToken", inputs: [], outputs: [{ type: "address" }], stateMutability: "view" },
+  { type: "function", name: "usdcToken", inputs: [], outputs: [{ type: "address" }], stateMutability: "view" },
   { type: "function", name: "getRoundCount", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
   {
     type: "function",
@@ -110,12 +88,13 @@ export const CCMTGESaleAbi = [
         components: [
           { name: "name", type: "string" },
           { name: "priceUsdc", type: "uint256" },
-          { name: "hardCapTokens", type: "uint256" },
-          { name: "soldTokens", type: "uint256" },
-          { name: "cliffSeconds", type: "uint256" },
-          { name: "vestSeconds", type: "uint256" },
-          { name: "startTime", type: "uint256" },
-          { name: "endTime", type: "uint256" },
+          { name: "hardCapTokens", type: "uint128" },
+          { name: "soldTokens", type: "uint128" },
+          { name: "startTime", type: "uint64" },
+          { name: "endTime", type: "uint64" },
+          { name: "cliffSeconds", type: "uint32" },
+          { name: "vestSeconds", type: "uint32" },
+          { name: "tgeBps", type: "uint16" },
           { name: "active", type: "bool" },
         ],
       },
@@ -127,20 +106,22 @@ export const CCMTGESaleAbi = [
     name: "allocations",
     inputs: [{ type: "uint256" }, { type: "address" }],
     outputs: [
-      { name: "totalAllocated", type: "uint256" },
-      { name: "claimed", type: "uint256" },
-      { name: "startTime", type: "uint256" },
-      { name: "cliffSeconds", type: "uint256" },
-      { name: "vestSeconds", type: "uint256" },
+      { name: "totalAllocated", type: "uint128" },
+      { name: "claimed", type: "uint128" },
+      { name: "startTime", type: "uint64" },
+      { name: "cliffSeconds", type: "uint32" },
+      { name: "vestSeconds", type: "uint32" },
+      { name: "tgeBps", type: "uint16" },
     ],
     stateMutability: "view",
   },
   { type: "function", name: "whitelist", inputs: [{ type: "uint256" }, { type: "address" }], outputs: [{ type: "bool" }], stateMutability: "view" },
   { type: "function", name: "claimable", inputs: [{ name: "roundId", type: "uint256" }, { name: "user", type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
-  // ── investor writes
-  { type: "function", name: "purchase", inputs: [{ name: "roundId", type: "uint256" }, { name: "ccmAmount", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
+  { type: "function", name: "quoteUsdc", inputs: [{ type: "uint256" }, { type: "uint256" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  // investor writes
+  { type: "function", name: "purchase", inputs: [{ name: "roundId", type: "uint256" }, { name: "assaAmount", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
   { type: "function", name: "claim", inputs: [{ name: "roundId", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
-  // ── events
+  // events
   { type: "event", name: "Purchased", inputs: [
     { type: "uint256", indexed: true },
     { type: "address", indexed: true },
@@ -152,6 +133,71 @@ export const CCMTGESaleAbi = [
     { type: "address", indexed: true },
     { type: "uint256" },
   ] },
+] as const;
+
+// ===================== TokenVesting =====================
+
+export const TokenVestingAbi = [
+  {
+    type: "function",
+    name: "schedules",
+    inputs: [{ type: "uint256" }],
+    outputs: [
+      { name: "beneficiary", type: "address" },
+      { name: "total", type: "uint256" },
+      { name: "claimed", type: "uint256" },
+      { name: "start", type: "uint256" },
+      { name: "cliff", type: "uint256" },
+      { name: "duration", type: "uint256" },
+      { name: "tgeBps", type: "uint16" },
+      { name: "category", type: "uint8" },
+      { name: "revocable", type: "bool" },
+      { name: "revoked", type: "bool" },
+    ],
+    stateMutability: "view",
+  },
+  { type: "function", name: "scheduleIdsOf", inputs: [{ type: "address" }], outputs: [{ type: "uint256[]" }], stateMutability: "view" },
+  { type: "function", name: "scheduleCountOf", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "releasable", inputs: [{ type: "uint256" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "vestedOf", inputs: [{ type: "uint256" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "release", inputs: [{ type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
+  { type: "function", name: "releaseAll", inputs: [], outputs: [], stateMutability: "nonpayable" },
+  { type: "function", name: "getScheduleCount", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
+] as const;
+
+// ===================== StakingLock (veASSA) =====================
+
+export const StakingLockAbi = [
+  {
+    type: "function",
+    name: "locks",
+    inputs: [{ type: "address" }],
+    outputs: [
+      { name: "amount", type: "uint128" },
+      { name: "start", type: "uint64" },
+      { name: "end", type: "uint64" },
+    ],
+    stateMutability: "view",
+  },
+  { type: "function", name: "votingPower", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "votingPowerAt", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "tierOf", inputs: [{ type: "address" }], outputs: [{ type: "uint8" }], stateMutability: "view" },
+  { type: "function", name: "tierWeight", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "totalLocked", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "MAX_LOCK_DURATION", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "MIN_LOCK_DURATION", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
+  // writes
+  { type: "function", name: "lock", inputs: [{ name: "amount", type: "uint256" }, { name: "duration", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
+  { type: "function", name: "increaseAmount", inputs: [{ name: "amount", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
+  { type: "function", name: "increaseUnlockTime", inputs: [{ name: "duration", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
+  { type: "function", name: "withdraw", inputs: [], outputs: [], stateMutability: "nonpayable" },
+] as const;
+
+// ===================== KYCRegistry =====================
+
+export const KYCRegistryAbi = [
+  { type: "function", name: "isKYCed", inputs: [{ type: "address" }], outputs: [{ type: "bool" }], stateMutability: "view" },
+  { type: "function", name: "kycedCount", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" },
 ] as const;
 
 // ===================== USDC =====================

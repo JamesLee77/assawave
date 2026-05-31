@@ -1,11 +1,11 @@
 /**
- * Build-time environment selector. The admin codebase compiles to two
+ * Build-time environment selector. The portal compiles to two
  * separate sites:
- *   - admin.ccmnetwork.net          (VITE_ENV=mainnet)
- *   - admin-testnet.ccmnetwork.net  (VITE_ENV=testnet)
+ *   - app.assawave.io          (VITE_ENV=mainnet)
+ *   - app-testnet.assawave.io  (VITE_ENV=testnet)
  *
  * Each build registers exactly ONE chain in wagmi and exposes contracts
- * for that chain only. There is no runtime path that lets the operator
+ * for that chain only. There is no runtime path that lets the investor
  * accidentally act on the wrong network from the wrong site.
  */
 

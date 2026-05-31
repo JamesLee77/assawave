@@ -1,8 +1,8 @@
 /**
- * "Add CCM to MetaMask" button.
+ * "Add ASSA to wallet" button.
  *
  * Uses EIP-747 `wallet_watchAsset` to pre-fill the token import dialog
- * with the correct symbol (CCM) and decimals (18). Eliminates the need
+ * with the correct symbol (ASSA) and decimals (18). Eliminates the need
  * for users to manually paste the contract address or type values that
  * could be wrong (a 12-decimal mistake displays balance as "10 trillion").
  */
@@ -15,14 +15,13 @@ const ZERO = "0x0000000000000000000000000000000000000000";
 
 type Status = "idle" | "pending" | "success" | "error";
 
-export default function AddCCMToWallet() {
+export default function AddTokenToWallet() {
   const { isConnected, connector } = useAccount();
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
 
-  // Don't render if no live mainnet contract (testnet build still uses
-  // sandbox addresses; user can add those manually if needed).
-  if (CONTRACTS.ccmTokenV1 === ZERO) return null;
+  // Don't render until the token is deployed (zero address = not live yet).
+  if (CONTRACTS.assaToken === ZERO) return null;
 
   async function add() {
     setStatus("pending");
@@ -41,8 +40,8 @@ export default function AddCCMToWallet() {
         params: {
           type: "ERC20",
           options: {
-            address: CONTRACTS.ccmTokenV1,
-            symbol: "CCM",
+            address: CONTRACTS.assaToken,
+            symbol: "ASSA",
             decimals: 18,
           },
         },
@@ -59,8 +58,8 @@ export default function AddCCMToWallet() {
   const label =
     status === "pending" ? "Adding…"
     : status === "success" ? "Added ✓"
-    : status === "error" ? "Add CCM to MetaMask (retry)"
-    : "Add CCM to MetaMask";
+    : status === "error" ? "Add ASSA to wallet (retry)"
+    : "Add ASSA to wallet";
 
   return (
     <div className="flex flex-col items-start gap-2">

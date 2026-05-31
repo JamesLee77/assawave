@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { formatUnits } from "viem";
+import { CONTRACTS } from "../lib/contracts";
 
-// MOCK OR LOCAL CONTRACT ADDRESSES (Base Sepolia Defaults)
-const ASSA_TOKEN_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-const STAKING_LOCK_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+// Addresses pinned by build env (mainnet/testnet), filled from
+// onchain/deployments/<network>.json after deploy. Zero address until then.
+const ASSA_TOKEN_ADDRESS = CONTRACTS.assaToken;
+const STAKING_LOCK_ADDRESS = CONTRACTS.stakingLock;
 
 const ASSA_TOKEN_ABI = [
   {

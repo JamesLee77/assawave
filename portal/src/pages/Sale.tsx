@@ -8,14 +8,14 @@ import {
   useWriteContract,
 } from "wagmi";
 import {
-  CCMTGESaleAbi,
-  CCMTokenAbi,
+  TokenSaleAbi,
+  ASSATokenAbi,
   CONTRACTS,
   EXPLORER,
   USDCAbi,
 } from "../lib/contracts";
 import { IS_MAINNET } from "../lib/env";
-import { fmtCCM } from "../lib/format";
+import { fmtASSA } from "../lib/format";
 import CopyableAddress from "../components/CopyableAddress";
 import {
   Card,
@@ -59,7 +59,7 @@ const fmtUSDC = (raw: bigint | undefined): string => {
   return formatUnits(raw, 6).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
 };
 
-const fmtPriceUsdcPerCcm = (priceUsdc: bigint): string =>
+const fmtPriceUsdcPerAssa = (priceUsdc: bigint): string =>
   `$${formatUnits(priceUsdc, 6)}`;
 
 const fmtDuration = (secs: bigint): string => {
@@ -79,15 +79,15 @@ const fmtDateTime = (ts: bigint): string => {
 
 export default function Sale() {
   const { address, isConnected } = useAccount();
-  const sale = CONTRACTS.ccmTgeSale as AddressStr;
+  const sale = CONTRACTS.tokenSale as AddressStr;
   const usdc = CONTRACTS.usdc as AddressStr;
-  const ccm = CONTRACTS.ccmTokenV1 as AddressStr;
+  const assaTokenAddr = CONTRACTS.assaToken as AddressStr;
   const saleDeployed = sale.toLowerCase() !== ZERO;
 
   // ─── Read all rounds ───
   const { data: roundCount, refetch: refetchRoundCount } = useReadContract({
     address: sale,
-    abi: CCMTGESaleAbi,
+    abi: TokenSaleAbi,
     functionName: "getRoundCount",
     query: { enabled: saleDeployed, refetchInterval: 12000 },
   });
@@ -97,7 +97,7 @@ export default function Sale() {
     contracts: saleDeployed && N > 0
       ? Array.from({ length: N }, (_, i) => ({
           address: sale,
-          abi: CCMTGESaleAbi,
+          abi: TokenSaleAbi,
           functionName: "getRound" as const,
           args: [BigInt(i)] as const,
         }))
@@ -121,7 +121,7 @@ export default function Sale() {
   const wlContracts = saleDeployed && N > 0 && address
     ? Array.from({ length: N }, (_, i) => ({
         address: sale,
-        abi: CCMTGESaleAbi,
+        abi: TokenSaleAbi,
         functionName: "whitelist" as const,
         args: [BigInt(i), address as AddressStr] as const,
       }))
@@ -130,7 +130,7 @@ export default function Sale() {
   const allocContracts = saleDeployed && N > 0 && address
     ? Array.from({ length: N }, (_, i) => ({
         address: sale,
-        abi: CCMTGESaleAbi,
+        abi: TokenSaleAbi,
         functionName: "allocations" as const,
         args: [BigInt(i), address as AddressStr] as const,
       }))
@@ -139,7 +139,7 @@ export default function Sale() {
   const claimContracts = saleDeployed && N > 0 && address
     ? Array.from({ length: N }, (_, i) => ({
         address: sale,
-        abi: CCMTGESaleAbi,
+        abi: TokenSaleAbi,
         functionName: "claimable" as const,
         args: [BigInt(i), address as AddressStr] as const,
       }))
@@ -183,7 +183,7 @@ export default function Sale() {
     });
   }, [allocResult, claimResult]);
 
-  // ─── User USDC + CCM balances + allowance to sale ───
+  // ─── User USDC + ASSA balances + allowance to sale ───
   const { data: usdcMeta } = useReadContracts({
     contracts: [
       { address: usdc, abi: USDCAbi, functionName: "balanceOf", args: address ? [address as AddressStr] : undefined },
@@ -196,10 +196,10 @@ export default function Sale() {
   const usdcAllowance = (usdcMeta?.[1]?.result as bigint | undefined) ?? 0n;
   const usdcSymbol = (usdcMeta?.[2]?.result as string | undefined) ?? "USDC";
 
-  // CCM balance shows what investor has been *delivered* (post-claim)
-  const { data: ccmBalance } = useReadContract({
-    address: ccm,
-    abi: CCMTokenAbi,
+  // ASSA balance shows what investor has been *delivered* (post-claim)
+  const { data: assaBalance } = useReadContract({
+    address: assaTokenAddr,
+    abi: ASSATokenAbi,
     functionName: "balanceOf",
     args: address ? [address as AddressStr] : undefined,
     query: { enabled: !!(saleDeployed && address), refetchInterval: 12000 },
@@ -249,7 +249,7 @@ export default function Sale() {
     if (!activeRoundData || purchaseAmountAtoms === 0n) return;
     writeContract({
       address: sale,
-      abi: CCMTGESaleAbi,
+      abi: TokenSaleAbi,
       functionName: "purchase",
       args: [BigInt(activeRound), purchaseAmountAtoms],
     });
@@ -258,7 +258,7 @@ export default function Sale() {
   function claim(roundId: number) {
     writeContract({
       address: sale,
-      abi: CCMTGESaleAbi,
+      abi: TokenSaleAbi,
       functionName: "claim",
       args: [BigInt(roundId)],
     });
@@ -272,7 +272,7 @@ export default function Sale() {
         <SectionLabel className="mb-3">Sale · Phase 0</SectionLabel>
         <H1>SAFT presale</H1>
         <Lede className="mt-5">
-          Multi-tier CCM token presale. KYC-cleared investors purchase with
+          Multi-tier ASSA token presale. KYC-cleared investors purchase with
           USDC; tokens lock for the round's cliff period, then vest linearly
           and become claimable. {IS_MAINNET
             ? "Investments here are real — review every transaction before signing."
@@ -293,7 +293,7 @@ export default function Sale() {
             TESTNET
           </span>
           <span className="font-mono text-[12px]" style={{ color: "var(--ink)" }}>
-            Base Sepolia · 84532 · No real value. CCM &amp; USDC are sandbox tokens.
+            Base Sepolia · 84532 · No real value. ASSA &amp; USDC are sandbox tokens.
           </span>
         </div>
       )}
@@ -309,7 +309,7 @@ export default function Sale() {
       {isConnected && !saleDeployed && (
         <Card className="text-center">
           <p style={{ color: "var(--ink-soft)" }}>
-            CCMTGESale is not yet deployed. {IS_MAINNET
+            The token sale contract is not yet deployed. {IS_MAINNET
               ? "Phase 0 mainnet deploy is pending; check back when sale opens."
               : "Testnet rehearsal sale will be available once the operator deploys it."}
           </p>
@@ -331,7 +331,7 @@ export default function Sale() {
             <H2 className="mb-5">Your balances</H2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Stat label={`Your ${usdcSymbol}`} value={`${fmtUSDC(usdcBalance)} ${usdcSymbol}`} />
-              <Stat label="Your CCM (claimed)" value={fmtCCM(ccmBalance as bigint | undefined)} />
+              <Stat label="Your ASSA (claimed)" value={fmtASSA(assaBalance as bigint | undefined)} />
               <div>
                 <div className="font-mono text-[10px] tracking-[0.14em] uppercase mb-2" style={{ color: "var(--ink-soft)" }}>
                   Your wallet
@@ -371,7 +371,7 @@ export default function Sale() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-[2fr_auto] gap-4 items-end mb-5">
-                <Field label="Amount to buy (whole CCM)">
+                <Field label="Amount to buy (whole ASSA)">
                   <input
                     type="number"
                     min={1}
@@ -431,7 +431,7 @@ export default function Sale() {
                   n={2}
                   active={usdcAllowance >= usdcRequired && usdcRequired > 0n}
                   done={false}
-                  title={`Purchase ${purchaseAmount || "?"} CCM`}
+                  title={`Purchase ${purchaseAmount || "?"} ASSA`}
                   detail="Tokens are credited to your allocation, locked for the round's cliff, then vest linearly."
                 />
               </ol>
@@ -665,10 +665,10 @@ function RoundRow({
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 mb-3">
-        <Field2 label="Price" value={`${fmtPriceUsdcPerCcm(r.priceUsdc)} / CCM`} />
+        <Field2 label="Price" value={`${fmtPriceUsdcPerAssa(r.priceUsdc)} / ASSA`} />
         <Field2
           label="Sold / Hardcap"
-          value={`${fmtCCM(r.soldTokens)} / ${fmtCCM(r.hardCapTokens, 0)} (${pct.toFixed(2)}%)`}
+          value={`${fmtASSA(r.soldTokens)} / ${fmtASSA(r.hardCapTokens, 0)} (${pct.toFixed(2)}%)`}
         />
         <Field2 label="Time" value={timeStatus} color={timeColor} />
         <Field2 label="Cliff / Vest" value={`${fmtDuration(r.cliffSeconds)} / ${fmtDuration(r.vestSeconds)}`} />
@@ -788,19 +788,19 @@ function AllocationRow({
           </span>
         </div>
         <CTA
-          label={busy ? "Claiming…" : `Claim ${fmtCCM(a.claimable)} CCM`}
+          label={busy ? "Claiming…" : `Claim ${fmtASSA(a.claimable)} ASSA`}
           onClick={onClaim}
           disabled={busy || a.claimable === 0n}
         />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 mb-3">
-        <Field2 label="Total" value={`${fmtCCM(a.totalAllocated)} CCM`} />
+        <Field2 label="Total" value={`${fmtASSA(a.totalAllocated)} ASSA`} />
         <Field2
           label="Claimed"
-          value={`${fmtCCM(a.claimed)} CCM (${claimedPct.toFixed(2)}%)`}
+          value={`${fmtASSA(a.claimed)} ASSA (${claimedPct.toFixed(2)}%)`}
         />
-        <Field2 label="Claimable now" value={`${fmtCCM(a.claimable)} CCM`} color="var(--positive)" />
+        <Field2 label="Claimable now" value={`${fmtASSA(a.claimable)} ASSA`} color="var(--positive)" />
         <Field2 label="Vest" value={`${vestPct.toFixed(2)}% of duration`} />
       </div>
 

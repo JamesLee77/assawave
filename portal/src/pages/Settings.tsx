@@ -1,11 +1,8 @@
 import { useAccount, useChainId } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-
-const CONTRACTS = {
-  assaToken: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  stakingLock: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-  bmeBurner: "0xCf7YC85E28a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8",
-};
+import { CONTRACTS } from "../lib/contracts";
+import { IS_MAINNET } from "../lib/env";
+import AddTokenToWallet from "../components/AddTokenToWallet";
 
 export default function Settings() {
   const { address, isConnected } = useAccount();
@@ -62,27 +59,33 @@ export default function Settings() {
               <div className="space-y-1.5">
                 <span className="text-ink-soft block uppercase tracking-wider">Active Network ID</span>
                 <div className="bg-surface-2/40 px-4 py-3 rounded-lg border border-rule text-ink font-semibold">
-                  Base Sepolia Testnet (ID: {chainId})
+                  {IS_MAINNET ? "Base Mainnet" : "Base Sepolia Testnet"} (ID: {chainId})
                 </div>
+              </div>
+
+              <div className="pt-1">
+                <AddTokenToWallet />
               </div>
             </div>
 
-            <div className="border-t border-rule pt-4">
-              <span className="text-[11px] font-display uppercase tracking-wider text-ink-soft block mb-2">
-                Need Testnet Funds?
-              </span>
-              <p className="text-xs text-ink-soft leading-relaxed">
-                ASSA WAVE is deployed on Base Sepolia. To request test ether for transactions, visit the official{" "}
-                <a 
-                  href="https://faucets.chain.link/base-sepolia" 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className="text-brand hover:underline font-semibold"
-                >
-                  Chainlink Base Sepolia Faucet
-                </a>.
-              </p>
-            </div>
+            {!IS_MAINNET && (
+              <div className="border-t border-rule pt-4">
+                <span className="text-[11px] font-display uppercase tracking-wider text-ink-soft block mb-2">
+                  Need Testnet Funds?
+                </span>
+                <p className="text-xs text-ink-soft leading-relaxed">
+                  The testnet portal runs on Base Sepolia. To request test ether for transactions, visit the official{" "}
+                  <a
+                    href="https://faucets.chain.link/base-sepolia"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-brand hover:underline font-semibold"
+                  >
+                    Chainlink Base Sepolia Faucet
+                  </a>.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Ecosystem Smart Contracts */}
