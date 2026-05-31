@@ -25,3 +25,13 @@ out/
 !.vscode/settings.json
 .idea/
 .gstack/
+
+# Confidential / internal source documents — keep OUT of this public repo.
+# (Whitepaper, financial models, decks, etc. Public PDFs belong in */public/.)
+*.docx
+*.xlsx
+*.xls
+*.pptx
+*.key
+*.numbers
+*.pages
