@@ -43,6 +43,10 @@ const config: HardhatUserConfig = {
       url: BASE_SEPOLIA_RPC,
       accounts: [PRIVATE_KEY],
       chainId: 84532,
+      // Pin a fixed gas limit: public Base Sepolia RPCs return unreliable
+      // eth_estimateGas on rapid sequential writes (too-low estimates → OOG
+      // reverts). A fixed limit skips estimateGas. Per-tx gasUsed is unchanged.
+      gas: 6_000_000,
     },
     base: {
       url: BASE_MAINNET_RPC,

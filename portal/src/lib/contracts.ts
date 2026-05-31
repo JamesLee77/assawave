@@ -31,16 +31,16 @@ const CONTRACTS_MAINNET = {
 };
 
 const CONTRACTS_TESTNET = {
-  // Base Sepolia deploy 2026-05-31 (onchain/deployments/baseSepolia.json):
-  assaToken: "0xa1409d98F58e89F5882B332E68c2EdfCcb188C60" as Address,
-  tokenSale: "0xAC372e21D881Cdc57AA80f02C0fDe3E6147B5c98" as Address,
-  tokenVesting: "0x1F53fD6a8dFfa21d4a108513e05Ff33BB10e1941" as Address,
-  stakingLock: "0x796E7C0296737F9b5AD8716488843D2BB222Dd2b" as Address,
+  // Base Sepolia redeploy 2026-05-31 (60s timelock; onchain/deployments/baseSepolia.json):
+  assaToken: "0x58233B116D933191D57bF719b4fF8e93d338aB3b" as Address,
+  tokenSale: "0xf7206474d4e9395ce296443Fcdb55089338b3554" as Address,
+  tokenVesting: "0xa7a5FB17F9dA8b09661e8c8940167AfB060363a5" as Address,
+  stakingLock: "0xd3C68d0dcf095c662F4B844be24cFa5D965fCFC6" as Address,
   bmeBurner: ZERO, // not deployed on testnet (needs a DEX pool/router)
-  kycRegistry: "0xcabD38a3543EfdE6830CB3F4486792DfC8A7E088" as Address,
-  treasury: "0x5c57741E44d5F1AbF4EE893D5816cf5117601a3d" as Address,
-  timelock: "0xbe357Dc9165b6A9c6cc1236F337607b110Bd1b11" as Address,
-  usdc: "0xb0178aa23370FeCDb9bd6FCE669D5A6a39A3c6bE" as Address, // MockUSDC (6dec)
+  kycRegistry: "0x96771b35fB6f2F3D045aE837ff9559365196b0d8" as Address,
+  treasury: "0x590608e02e8992D7537e5dD50Ad1c5896C296424" as Address,
+  timelock: "0xf6977062D646623766Ce6024266C215aB8A92111" as Address,
+  usdc: "0x429F42Cea1977720bc97eC9d0CD45f7465F76F55" as Address, // MockUSDC (6dec)
 };
 
 /** Active contract set — pinned by build env. */

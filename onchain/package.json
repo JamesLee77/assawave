@@ -1,7 +1,7 @@
 {
   "name": "assawave-onchain",
   "version": "0.1.0",
-  "description": "ASSA WAVE Token (ASSA) smart contracts — veASSA zero-yield staking and BME burning pipeline",
+  "description": "ASSA WAVE Token (ASSA) smart contracts \u2014 veASSA zero-yield staking and BME burning pipeline",
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -33,7 +33,8 @@
     "verify:all:sepolia": "hardhat run scripts/verify-sepolia.ts --network baseSepolia",
     "verify:mainnet": "hardhat verify --network base",
     "node": "hardhat node",
-    "clean": "hardhat clean"
+    "clean": "hardhat clean",
+    "gov:demo:sepolia": "hardhat run scripts/gov-demo-sepolia.ts --network baseSepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

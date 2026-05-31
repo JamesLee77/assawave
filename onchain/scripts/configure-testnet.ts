@@ -33,6 +33,10 @@ async function main() {
   const usdc = await ethers.getContractAt("MockUSDC", c.MockUSDC);
   const kyc = await ethers.getContractAt("KYCRegistry", c.KYCRegistry);
 
+  // Public Base Sepolia RPCs under-estimate gas on ERC20Votes mints (checkpoint
+  // SSTORE), causing OOG. Pin an explicit limit to skip estimateGas.
+  const TX = { gasLimit: 600_000 } as const;
+
   const A = (n: string) => ethers.parseUnits(n, 18); // ASSA (18dec)
   const U = (n: string) => ethers.parseUnits(n, 6); // USDC (6dec)
 
@@ -44,40 +48,45 @@ async function main() {
 
   // 1. Funding gate — pre-fund Sale + Vesting with ASSA.
   console.log("  · mint ASSA → TokenSale (round cap)");
-  await (await assa.mint(c.TokenSale, ROUND_CAP)).wait();
+  if ((await assa.balanceOf(c.TokenSale)) < ROUND_CAP) await (await assa.mint(c.TokenSale, ROUND_CAP, TX)).wait();
   console.log("  · mint ASSA → TokenVesting (schedule total)");
-  await (await assa.mint(c.TokenVesting, VEST_TOTAL)).wait();
+  if ((await assa.balanceOf(c.TokenVesting)) < VEST_TOTAL) await (await assa.mint(c.TokenVesting, VEST_TOTAL, TX)).wait();
 
   // 2. Seed the demo wallet.
   console.log("  · mint ASSA → demo wallet (50k)");
-  await (await assa.mint(demo, DEMO_ASSA)).wait();
+  if ((await assa.balanceOf(demo)) < DEMO_ASSA) await (await assa.mint(demo, DEMO_ASSA, TX)).wait();
   console.log("  · mint MockUSDC → demo wallet (5k)");
-  await (await usdc.mint(demo, DEMO_USDC)).wait();
+  if ((await usdc.balanceOf(demo)) < DEMO_USDC) await (await usdc.mint(demo, DEMO_USDC, TX)).wait();
 
   // 3. Configure sale round 0 + gate the demo wallet.
   const now = (await ethers.provider.getBlock("latest"))!.timestamp;
   console.log("  · configureRound(0) Private R1");
-  await (
-    await sale.configureRound(
-      0,
-      "Private R1",
-      PRICE,
-      ROUND_CAP,
-      now - 300, // started 5 min ago (safely open)
-      now + 12 * MONTH, // open for 12 months
-      0, // cliff
-      6 * MONTH, // 6mo linear
-      1000, // 10% TGE
-      true // active
-    )
-  ).wait();
+  if ((await sale.getRoundCount()) === 0n) {
+    await (
+      await sale.configureRound(
+        0,
+        "Private R1",
+        PRICE,
+        ROUND_CAP,
+        now - 300, // started 5 min ago (safely open)
+        now + 12 * MONTH, // open for 12 months
+        0, // cliff
+        6 * MONTH, // 6mo linear
+        1000, // 10% TGE
+        true, // active
+        TX
+      )
+    ).wait();
+  }
   console.log("  · whitelist + KYC demo wallet for round 0");
-  await (await sale.setWhitelist(0, [demo], true)).wait();
-  await (await kyc.setKYCed(demo, true)).wait();
+  await (await sale.setWhitelist(0, [demo], true, TX)).wait();
+  await (await kyc.setKYCed(demo, true, TX)).wait();
 
   // 4. Vesting schedule for the demo wallet (1M, 10% TGE, 0 cliff, 6mo linear).
   console.log("  · createSchedule for demo wallet (1M ASSA)");
-  await (await vesting.createSchedule(demo, VEST_TOTAL, 1000, 0, 6 * MONTH, false, 2)).wait();
+  if ((await vesting.scheduleCountOf(demo)) === 0n) {
+    await (await vesting.createSchedule(demo, VEST_TOTAL, 1000, 0, 6 * MONTH, false, 2, TX)).wait();
+  }
 
   console.log(`\n✅ Configured. Connect ${demo} in the portal:`);
   console.log("   Dashboard → 50k ASSA balance");
