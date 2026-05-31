@@ -1,5 +1,12 @@
 import { Link } from "react-router-dom";
 import type { ReactNode } from "react";
+import {
+  BMEFlywheel,
+  ArchitectureLayers,
+  NodeTierPyramid,
+  HybridXP,
+  VeASSAStaking,
+} from "../components/site/WhitepaperFigures";
 
 /**
  * Public lite-paper for assawave.io/whitepaper.
@@ -204,6 +211,13 @@ export default function Whitepaper() {
               User Device → Network (P2P validation, IPFS cache, 5G mesh) → Smart Contract (Base L2 → custom L3)
               → B2B / Marketing.
             </p>
+            <ArchitectureLayers />
+            <p>
+              The split matters in practice: app-store policy treats fiat purchases and token/NFT
+              custody very differently, so isolating wallet, mining, and DAO surfaces in a separate
+              app keeps the music experience reviewable while the on-chain layer evolves
+              independently. Each layer can scale and be audited on its own.
+            </p>
             <H3>Edge Compute Mining (DePIN)</H3>
             <p>
               Singing is universal, but AI compute is scarce — that is where real value sits. Mining has two
@@ -218,6 +232,7 @@ export default function Whitepaper() {
               ["Tier-B", "Standard phones (~15 TOPS)"],
               ["Tier-C", "Entry devices (~5 TOPS)"],
             ]} />
+            <NodeTierPyramid />
             <p>
               Korea plays two roles — <strong className="text-ink">K-pop content origin</strong> and a
               <strong className="text-ink"> Korea-market edge</strong> — while the global edge is distributed
@@ -276,9 +291,7 @@ export default function Whitepaper() {
               ["Social 20%", "Nodes, friends, challenges"],
               ["Stake 10%", "veASSA / NFT holdings"],
             ]} />
-            <p className="text-[13px] text-ink-dim">
-              Skill (40%) outweighs AI (30%) to prevent pay-to-win — the best singers rise fastest.
-            </p>
+            <HybridXP />
           </WPSection>
 
           <WPSection id="tokenomics" index="§ 07" eyebrow="Tokenomics" title="Tokenomics (mechanics)">
@@ -309,12 +322,39 @@ export default function Whitepaper() {
               while demand rises → reward value to providers and singers is preserved → more nodes and users →
               more revenue → repeat. This is the model validated by Helium, Render, and io.net.
             </p>
-            <H3>veASSA + tier governance</H3>
+            <BMEFlywheel />
+            <p>
+              The key property is that rewards are funded by <strong className="text-ink">real external
+              revenue</strong>, not by inflating supply against the 10B hard cap. When usage rises, more revenue
+              is routed into buy-and-burn, so growth tightens supply rather than diluting it — the opposite of a
+              P2E emission spiral.
+            </p>
+            <H3>veASSA — staking for governance, not yield</H3>
+            <p>
+              $ASSA can be time-locked into <strong className="text-ink">veASSA</strong> to earn a say in the
+              ecosystem — never interest. This stake is <strong className="text-ink">zero-yield by design</strong>:
+              no APY, no emission, no reward path. What you get instead is <em className="italic-brand">fandom
+              differentiation</em> — governance weight and tier privileges that spending alone cannot buy.
+            </p>
+            <VeASSAStaking />
             <p>
               Voting Power = veASSA held × Tier Multiplier. A whale with no activity holds zero power, and a rookie
               with no stake holds zero — activity <em className="italic-brand">and</em> stake are both required
-              (skin in the game on both sides). Higher tiers unlock broader governance topics, and the top tier
-              gets a once-per-season veto.
+              (skin in the game on both sides). Locked power decays linearly to zero at unlock, so influence
+              tracks ongoing commitment rather than a one-time deposit.
+            </p>
+            <H3>What a veASSA lock unlocks</H3>
+            <Bullets items={[
+              <>Governance scope that widens by tier — from feature polls up to treasury and partnership topics</>,
+              <>Setlist / A&amp;R voting — fans help decide what gets made</>,
+              <>A once-per-season veto reserved for the top tier</>,
+              <>Tier perks across the app (the 10% “Stake” weight in Hybrid-XP)</>,
+              <>Cheer-pool and debut-funding participation rights</>,
+            ]} />
+            <p className="text-[13px] text-ink-dim">
+              On-chain, veASSA is a strict zero-yield lock — the staking contract exposes no
+              reward / emission / interest function (an invariant the test suite enforces). $ASSA is a utility
+              token; see §10.
             </p>
           </WPSection>
 
@@ -379,7 +419,7 @@ export default function Whitepaper() {
             <Rows items={[
               ["$ASSA", "ASSA WAVE utility token (ERC-20, 10B hard cap)"],
               ["BME", "Burn-Mint Equilibrium — auto-burn of a share of revenue"],
-              ["veASSA", "Time-locked $ASSA — governance + reward boost"],
+              ["veASSA", "Time-locked $ASSA — governance weight + tier privileges (zero yield)"],
               ["Voice DNA NFT", "User voice-fingerprint NFT (Story Protocol)"],
               ["Phone Node", "Smartphone as a Node — the most accessible type"],
               ["VPU", "Verified Performance Unit — Pitch, Tempo, Tone, Power, Completion"],

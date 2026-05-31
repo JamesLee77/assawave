@@ -35,3 +35,6 @@ out/
 *.key
 *.numbers
 *.pages
+
+# Confidential investor-paper material (NDA-only) — never publish to this public repo
+docs/CONFIDENTIAL-*.md
