@@ -23,6 +23,8 @@
     "deploy:staking:mainnet": "hardhat run scripts/deploy-staking.ts --network base",
     "deploy:bme:sepolia": "hardhat run scripts/deploy-bme.ts --network baseSepolia",
     "deploy:bme:mainnet": "hardhat run scripts/deploy-bme.ts --network base",
+    "configure:sepolia": "hardhat run scripts/configure-testnet.ts --network baseSepolia",
+    "e2e:sepolia": "hardhat run scripts/e2e-testnet.ts --network baseSepolia",
     "verify:sepolia": "hardhat verify --network baseSepolia",
     "verify:mainnet": "hardhat verify --network base",
     "node": "hardhat node",
