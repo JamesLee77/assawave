@@ -9,12 +9,13 @@ import {TimelockController} from "@openzeppelin/contracts/governance/TimelockCon
  *         The ultimate admin of the protocol (token roles, sale config, treasury,
  *         upgrades) is a Gnosis Safe multisig acting through this timelock.
  *
- * @dev The 48h floor is relaxed only on local dev chains (31337 hardhat / 1337) so the
- *      test/deploy rehearsal flow doesn't have to wait two days. On Base mainnet/Sepolia
- *      the floor is enforced.
+ * @dev The 48h floor is enforced on Base mainnet (chainid 8453) only. Local dev chains
+ *      and testnets (Base Sepolia, etc.) allow shorter delays so the full
+ *      propose -> wait -> execute governance loop can be rehearsed without a two-day wait.
  */
 contract ASSATimelock is TimelockController {
     uint256 public constant MIN_DELAY_FLOOR = 48 hours;
+    uint256 public constant MAINNET_CHAIN_ID = 8453;
 
     constructor(
         uint256 minDelay,
@@ -22,7 +23,7 @@ contract ASSATimelock is TimelockController {
         address[] memory executors,
         address admin
     ) TimelockController(minDelay, proposers, executors, admin) {
-        if (block.chainid != 31337 && block.chainid != 1337) {
+        if (block.chainid == MAINNET_CHAIN_ID) {
             require(minDelay >= MIN_DELAY_FLOOR, "Timelock: below 48h floor");
         }
     }

@@ -28,6 +28,7 @@
     "deploy:safe:sepolia": "hardhat run scripts/deploy-safe.ts --network baseSepolia",
     "swap:timelock:sepolia": "hardhat run scripts/swap-timelock-signer.ts --network baseSepolia",
     "safe:propose:sepolia": "hardhat run scripts/safe-propose.ts --network baseSepolia",
+    "fast:gov:sepolia": "hardhat run scripts/fast-gov-loop.ts --network baseSepolia",
     "verify:sepolia": "hardhat verify --network baseSepolia",
     "verify:all:sepolia": "hardhat run scripts/verify-sepolia.ts --network baseSepolia",
     "verify:mainnet": "hardhat verify --network base",
