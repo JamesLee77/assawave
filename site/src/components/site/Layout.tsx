@@ -45,13 +45,22 @@ export default function Layout() {
             ))}
           </nav>
           <div className="flex items-center gap-3">
-            <WalletButton />
-            <a
-              href={APP_URL}
-              className="btn-primary hidden sm:inline-flex px-5 text-[13px] font-semibold tracking-wide"
-            >
-              {t("nav:app")}
-            </a>
+            <WalletButton className="whitespace-nowrap" />
+            {/* Open App is hidden on phones to declutter the header (logo + Connect
+                Wallet + toggle alone fit 375px without the wallet label wrapping).
+                The responsive toggle lives on this plain wrapper span, NOT on the
+                <a>: `.btn-primary` sets `display` as unlayered CSS, which beats
+                Tailwind v4's utilities layer, so a `hidden` on the link itself is
+                ignored. Portal stays reachable on mobile via the in-page/footer CTAs;
+                Open App returns in the header at md+. */}
+            <span className="hidden md:inline-flex">
+              <a
+                href={APP_URL}
+                className="btn-primary px-5 text-[13px] font-semibold tracking-wide"
+              >
+                {t("nav:app")}
+              </a>
+            </span>
             <ThemeToggle />
           </div>
         </div>
