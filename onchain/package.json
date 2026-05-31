@@ -25,6 +25,7 @@
     "deploy:bme:mainnet": "hardhat run scripts/deploy-bme.ts --network base",
     "configure:sepolia": "hardhat run scripts/configure-testnet.ts --network baseSepolia",
     "e2e:sepolia": "hardhat run scripts/e2e-testnet.ts --network baseSepolia",
+    "swap:timelock:sepolia": "hardhat run scripts/swap-timelock-signer.ts --network baseSepolia",
     "verify:sepolia": "hardhat verify --network baseSepolia",
     "verify:all:sepolia": "hardhat run scripts/verify-sepolia.ts --network baseSepolia",
     "verify:mainnet": "hardhat verify --network base",
