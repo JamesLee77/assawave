@@ -38,3 +38,7 @@ dist/
 build/
 .vite/
 *.tsbuildinfo
+
+# Ephemeral local deploy registries (real-network registries ARE committed)
+deployments/hardhat.json
+deployments/localhost.json
