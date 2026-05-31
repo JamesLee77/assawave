@@ -1,0 +1,16 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "deployer": "0xa547684361bB20Ca497859dD090A44C9F0A9D8Da",
+  "updatedAt": "2026-05-31T02:54:54.510Z",
+  "contracts": {
+    "MockUSDC": "0xb0178aa23370FeCDb9bd6FCE669D5A6a39A3c6bE",
+    "ASSAToken": "0xa1409d98F58e89F5882B332E68c2EdfCcb188C60",
+    "KYCRegistry": "0xcabD38a3543EfdE6830CB3F4486792DfC8A7E088",
+    "Treasury": "0x5c57741E44d5F1AbF4EE893D5816cf5117601a3d",
+    "ASSATimelock": "0xbe357Dc9165b6A9c6cc1236F337607b110Bd1b11",
+    "TokenVesting": "0x1F53fD6a8dFfa21d4a108513e05Ff33BB10e1941",
+    "TokenSale": "0xAC372e21D881Cdc57AA80f02C0fDe3E6147B5c98",
+    "StakingLock": "0x796E7C0296737F9b5AD8716488843D2BB222Dd2b"
+  }
+}

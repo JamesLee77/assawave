@@ -31,16 +31,16 @@ const CONTRACTS_MAINNET = {
 };
 
 const CONTRACTS_TESTNET = {
-  // Fill from onchain/deployments/baseSepolia.json after testnet deploy:
-  assaToken: ZERO,
-  tokenSale: ZERO,
-  tokenVesting: ZERO,
-  stakingLock: ZERO,
-  bmeBurner: ZERO,
-  kycRegistry: ZERO,
-  treasury: ZERO,
-  timelock: ZERO,
-  usdc: ZERO, // Sandbox USDC (set after deploy)
+  // Base Sepolia deploy 2026-05-31 (onchain/deployments/baseSepolia.json):
+  assaToken: "0xa1409d98F58e89F5882B332E68c2EdfCcb188C60" as Address,
+  tokenSale: "0xAC372e21D881Cdc57AA80f02C0fDe3E6147B5c98" as Address,
+  tokenVesting: "0x1F53fD6a8dFfa21d4a108513e05Ff33BB10e1941" as Address,
+  stakingLock: "0x796E7C0296737F9b5AD8716488843D2BB222Dd2b" as Address,
+  bmeBurner: ZERO, // not deployed on testnet (needs a DEX pool/router)
+  kycRegistry: "0xcabD38a3543EfdE6830CB3F4486792DfC8A7E088" as Address,
+  treasury: "0x5c57741E44d5F1AbF4EE893D5816cf5117601a3d" as Address,
+  timelock: "0xbe357Dc9165b6A9c6cc1236F337607b110Bd1b11" as Address,
+  usdc: "0xb0178aa23370FeCDb9bd6FCE669D5A6a39A3c6bE" as Address, // MockUSDC (6dec)
 };
 
 /** Active contract set — pinned by build env. */
