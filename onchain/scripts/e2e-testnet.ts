@@ -76,6 +76,24 @@ async function main() {
   const kyc = await ethers.getContractAt("KYCRegistry", c.KYCRegistry);
   const staking = await ethers.getContractAt("StakingLock", c.StakingLock);
 
+  // ── Precondition: deployer must still hold MINTER_ROLE ──────────────────────
+  // e2e drives admin-only flows (mint, configureRound, whitelist/KYC, createSchedule)
+  // AS the deployer. After the admin handoff those roles live on the Timelock, so the
+  // deployer can't run them and the first mint reverts with a cryptic "execution
+  // reverted". Detect it up front and explain. e2e is a PRE-handoff tool.
+  const MINTER_ROLE = await assa.MINTER_ROLE();
+  if (!(await assa.hasRole(MINTER_ROLE, deployer.address))) {
+    console.log(
+      `\n⏭️  E2E PRECONDITION NOT MET — deployer no longer holds MINTER_ROLE.\n` +
+        `   This deployment has completed its admin handoff: mint/admin roles now live on\n` +
+        `   the Timelock (${c.ASSATimelock}), so e2e's deployer-driven funding gate cannot run.\n` +
+        `   The deployment is healthy — e2e only applies to a PRE-handoff stack. For\n` +
+        `   post-handoff governance flows use:  npm run gov:demo:sepolia\n`
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   // ── 0. Gas for the test wallet ──────────────────────────────────────────────
   const need = ethers.parseEther("0.0006");
   if ((await ethers.provider.getBalance(test.address)) < need) {
