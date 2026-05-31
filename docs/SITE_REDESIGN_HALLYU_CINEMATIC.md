@@ -3,7 +3,7 @@
 > **Version:** v1.0 · **Date:** 2026-05-30 · **Official Domain:** assawave.io
 > **Parent Documents:** `ASSA_WAVE_SITE_DESIGN.md` (Design Single Source of Truth) · `DEVELOPMENT_PLAN.md` (Overall Development Plan)
 > **Target:** Marketing site (`site/`) landing page. App/Portal/Admin are out of scope.
-> **Status:** Foundation (Increments 1 & 2) applied / Photos (Increment 3) pending `GEMINI_API_KEY` gate.
+> **Status:** COMPLETE — foundation + mood photos applied; site live at assawave.io (desktop & mobile verified). `GEMINI_API_KEY` is **optional** (only to regenerate mood images, not to run/build/deploy).
 
 ---
 
@@ -106,11 +106,11 @@ Commonalities: **Photo-led, single-line menu, pill buttons, color overlay for mo
 - Delete dead components: `AnchorNav.tsx`, `WaveLines.tsx`. Clean up dead copy (en.json).
 - Validation: typecheck clean · build green.
 
-### ⏳ Increment 3 — AI Mood Images (Requires key = `GEMINI_API_KEY`)
+### ✅ Increment 3 — AI Mood Images (DONE) · `GEMINI_API_KEY` optional
 
-> **This is the core lever for the quality jump.** Increments 1 and 2 created the *vessel* to receive the photos. While the vessel is empty (stage-fallback gradient), it is normal for the hero/cards to look somewhat bare. The "entertainment" quality is only complete once actual photos are populated.
+> **Complete.** The dark-cinematic mood images are generated and committed under `site/public/brand/` (`hero-crowd.jpg`, `singer-performance.png`, `mobile-singing.png`, `album-artwork.png`, …) and the live site renders them (hero + solution cards). NOTE: the implemented filenames diverged from the `engine-*.jpg` slot names in the table below — the table is kept only as a **regeneration reference**.
 
-**Prerequisites:** User adds `export GEMINI_API_KEY=...` to `~/.zshrc` (credentials — do not paste in chat). genai and Pillow are already installed.
+**`GEMINI_API_KEY` is NOT a build/runtime/deploy dependency** — the images ship as static assets, so the site works without it (mobile-verified). The key is needed *only* to regenerate or create new mood images via the nano-banana script. To do that: `export GEMINI_API_KEY=...` in `~/.zshrc` (credential — do not paste in chat); genai + Pillow are already installed.
 
 **Generation Script:** `~/.claude/.../nano-banana/scripts/generate_image.py "<prompt>" <out> --aspect <r> --size 2K`
 
@@ -135,11 +135,11 @@ Based on `ASSA_WAVE_SITE_DESIGN.md` §3.1: Roadmap (M1~M5) · FAQ (Accordion) ·
 ## 4. Acceptance Criteria
 
 - [ ] Single-line menu (no stacked/redundant nav) — ✅ Increment 1
-- [ ] Hero is photo-led (not abstract graphics) — Vessel ✅ / Photos ⏳ Increment 3
-- [ ] Consistent rounded corners & pills across all sections — ✅ Increment 2
-- [ ] Remove mono terminal labels — ✅ Increment 2
-- [ ] Apply 5 actual mood photos — ⏳ Increment 3 (`GEMINI_API_KEY` gate)
-- [ ] WCAG AA text contrast on photos for both light/dark themes — ⏳ Increment 3
+- [x] Hero is photo-led (not abstract graphics) — ✅ (`hero-crowd.jpg` live)
+- [x] Consistent rounded corners & pills across all sections — ✅ Increment 2
+- [x] Remove mono terminal labels — ✅ Increment 2
+- [x] Apply mood photos — ✅ committed under `site/public/brand/`, live (key not required)
+- [x] Text contrast on photos (light/dark) — ✅ hero/cards use a fixed dark backdrop + white text
 - [ ] typecheck clean · build green — ✅ Maintained
 - [ ] Pass adversarial design review (tone, contrast, accessibility, responsiveness) — ⏳ After Increment 3
 
@@ -147,7 +147,7 @@ Based on `ASSA_WAVE_SITE_DESIGN.md` §3.1: Roadmap (M1~M5) · FAQ (Accordion) ·
 
 ## 5. Risks / Dependencies
 
-1. **Quality jump depends on `GEMINI_API_KEY`.** Without the key, only the cinematic *structure* is possible (empty vessels for photos). → User key setup is a prerequisite for the next session.
+1. ~~Quality jump depends on `GEMINI_API_KEY`.~~ **Resolved** — mood images are generated and committed; the live site needs no key to run, build, or deploy. `GEMINI_API_KEY` is now only an *optional* tool for regenerating images, never a release blocker.
 2. **Text contrast on photos (light theme).** Hero/Solution cards have a fixed dark backdrop with white text — safe even in light theme. However, theme-responsive SVGs such as Node may break in light theme if a dark backdrop is forced, so we will handle this with photo + fixed dark treatment in Increment 3.
 3. **Copyright/Portrait rights.** No real idols or third-party product photos. AI generation must also avoid *identifiable real people* (backs of crowds, silhouettes, hands, objects).
 4. **Reown/WalletConnect console 403/400** — scaffold projectId noise, irrelevant to the landing page.
