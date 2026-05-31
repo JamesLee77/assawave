@@ -78,4 +78,4 @@ Phase-1 contracts are complete and deployed to Base Sepolia; the marketing site 
 
 ## License
 
-© ASSA WAVE. All rights reserved. This repository is public for transparency; no license for reuse is granted unless a `LICENSE` file states otherwise.
+© 2026 ASSA WAVE. All rights reserved — see [`LICENSE`](LICENSE). This repository is public for transparency and review only; no rights to use, copy, modify, or distribute are granted.
