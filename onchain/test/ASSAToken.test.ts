@@ -38,16 +38,17 @@ describe("ASSAToken — token unit & security paths", () => {
       await expect(factory.deploy(ethers.ZeroAddress)).to.be.revertedWith("ASSAToken: admin zero");
     });
 
-    it("grants ADMIN + MINTER + BURNER to the admin only", async () => {
+    it("grants ADMIN + MINTER to the admin only", async () => {
       const ADMIN = await assa.DEFAULT_ADMIN_ROLE();
       const MINTER = await assa.MINTER_ROLE();
-      const BURNER = await assa.BURNER_ROLE();
       expect(await assa.hasRole(ADMIN, admin.address)).to.equal(true);
       expect(await assa.hasRole(MINTER, admin.address)).to.equal(true);
-      expect(await assa.hasRole(BURNER, admin.address)).to.equal(true);
       // a non-admin holds nothing
       expect(await assa.hasRole(MINTER, alice.address)).to.equal(false);
-      expect(await assa.hasRole(BURNER, alice.address)).to.equal(false);
+    });
+
+    it("exposes no BURNER_ROLE — no role can confiscate holder balances", async () => {
+      expect(assa.interface.hasFunction("BURNER_ROLE")).to.equal(false);
     });
   });
 
@@ -78,23 +79,38 @@ describe("ASSAToken — token unit & security paths", () => {
       expect(await assa.totalSupply()).to.equal(ethers.parseUnits("60", 18));
     });
 
-    it("burnFrom is role-gated and bypasses allowance (BURNER can burn any holder)", async () => {
+    it("burnFrom spends the holder's allowance (standard ERC20Burnable)", async () => {
       await assa.mint(alice.address, ethers.parseUnits("100", 18));
-      const BURNER = await assa.BURNER_ROLE();
-      await assa.grantRole(BURNER, bob.address);
-
-      // bob holds ZERO allowance from alice, yet (as BURNER) can burn her tokens.
-      expect(await assa.allowance(alice.address, bob.address)).to.equal(0n);
-      await assa.connect(bob).burnFrom(alice.address, ethers.parseUnits("100", 18));
-      expect(await assa.balanceOf(alice.address)).to.equal(0n);
+      await assa.connect(alice).approve(bob.address, ethers.parseUnits("50", 18));
+      await assa.connect(bob).burnFrom(alice.address, ethers.parseUnits("40", 18));
+      expect(await assa.balanceOf(alice.address)).to.equal(ethers.parseUnits("60", 18));
+      expect(await assa.allowance(alice.address, bob.address)).to.equal(ethers.parseUnits("10", 18));
     });
 
-    it("a non-BURNER cannot burnFrom even with a full allowance", async () => {
+    it("burnFrom without allowance reverts — even for the token admin", async () => {
       await assa.mint(alice.address, ethers.parseUnits("100", 18));
-      await assa.connect(alice).approve(bob.address, ethers.MaxUint256);
+      expect(await assa.allowance(alice.address, admin.address)).to.equal(0n);
       await expect(
-        assa.connect(bob).burnFrom(alice.address, ONE)
-      ).to.be.revertedWithCustomError(assa, "AccessControlUnauthorizedAccount");
+        assa.burnFrom(alice.address, ONE)
+      ).to.be.revertedWithCustomError(assa, "ERC20InsufficientAllowance");
+    });
+  });
+
+  describe("lifetime mint cap", () => {
+    it("burning does NOT restore mint headroom — the cap is on cumulative issuance", async () => {
+      const CAP = await assa.CAP();
+      await assa.mint(admin.address, CAP); // exhaust lifetime issuance
+      await assa.burn(ethers.parseUnits("100", 18)); // burn is permanent
+      await expect(assa.mint(admin.address, 1n)).to.be.revertedWith("ASSAToken: cap exceeded");
+    });
+
+    it("totalMinted tracks cumulative issuance independent of burns", async () => {
+      await assa.mint(alice.address, ethers.parseUnits("100", 18));
+      await assa.connect(alice).burn(ethers.parseUnits("40", 18));
+      expect(await assa.totalMinted()).to.equal(ethers.parseUnits("100", 18));
+      expect(await assa.totalSupply()).to.equal(ethers.parseUnits("60", 18));
+      await assa.mint(alice.address, ethers.parseUnits("25", 18));
+      expect(await assa.totalMinted()).to.equal(ethers.parseUnits("125", 18));
     });
   });
 
@@ -114,6 +130,14 @@ describe("ASSAToken — token unit & security paths", () => {
     it("admin recovers stray tokens to a recipient", async () => {
       await assa.recoverERC20(await usdc.getAddress(), bob.address, 1_000n * 10n ** 6n);
       expect(await usdc.balanceOf(bob.address)).to.equal(1_000n * 10n ** 6n);
+    });
+
+    it("reverts instead of silently succeeding when the stray token returns false (SafeERC20)", async () => {
+      const falseToken = await (await ethers.getContractFactory("MockFalseERC20")).deploy();
+      await falseToken.mint(await assa.getAddress(), 1000n);
+      await expect(
+        assa.recoverERC20(await falseToken.getAddress(), bob.address, 1000n)
+      ).to.be.revertedWithCustomError(assa, "SafeERC20FailedOperation");
     });
   });
 
@@ -170,6 +194,18 @@ describe("ASSAToken — token unit & security paths", () => {
       await expect(
         assa.permit(alice.address, bob.address, value, deadline, v, r, s)
       ).to.be.revertedWithCustomError(assa, "ERC2612ExpiredSignature");
+    });
+
+    it("permit-granted allowance can be spent by burnFrom (gasless burn flow)", async () => {
+      await assa.mint(alice.address, ethers.parseUnits("100", 18));
+      const value = ethers.parseUnits("30", 18);
+      const deadline = BigInt(await time.latest()) + 3600n;
+      const { v, r, s } = await signPermit(alice, bob.address, value, deadline);
+      await assa.permit(alice.address, bob.address, value, deadline, v, r, s);
+
+      await assa.connect(bob).burnFrom(alice.address, value);
+      expect(await assa.balanceOf(alice.address)).to.equal(ethers.parseUnits("70", 18));
+      expect(await assa.allowance(alice.address, bob.address)).to.equal(0n);
     });
 
     it("rejects a permit whose signer is not the owner", async () => {

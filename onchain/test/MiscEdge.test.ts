@@ -21,17 +21,16 @@ describe("Edge cases & admin paths", () => {
       assa = await (await ethers.getContractFactory("ASSAToken")).deploy(admin.address);
     });
 
-    it("BURNER_ROLE can burnFrom; non-burner cannot", async () => {
+    it("burnFrom honors allowances (no role can bypass)", async () => {
       await assa.mint(alice.address, ethers.parseUnits("100", 18));
-      const BURNER = await assa.BURNER_ROLE();
-      await assa.grantRole(BURNER, bob.address);
+      await assa.connect(alice).approve(bob.address, ethers.parseUnits("40", 18));
       await assa.connect(bob).burnFrom(alice.address, ethers.parseUnits("40", 18));
       expect(await assa.balanceOf(alice.address)).to.equal(ethers.parseUnits("60", 18));
 
-      await assa.revokeRole(BURNER, bob.address);
+      // allowance exhausted → any further burnFrom reverts
       await expect(assa.connect(bob).burnFrom(alice.address, 1n)).to.be.revertedWithCustomError(
         assa,
-        "AccessControlUnauthorizedAccount"
+        "ERC20InsufficientAllowance"
       );
     });
 

@@ -9,7 +9,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
  * reproducible — no Foundry/fast-check toolchain required.
  *
  * Core invariants (Contract Spec §7):
- *   1. totalSupply <= CAP always.
+ *   1. totalMinted <= CAP always (lifetime issuance; burns never restore headroom).
  *   4. sale sold <= round cap.
  *   3. vesting claimed <= total; vested monotonic and within [0, total].
  *   5. veASSA: votingPower <= amount, == 0 at/after end, no reward path.
@@ -43,26 +43,41 @@ describe("Invariant / property fuzz suite", () => {
     [admin, alice] = await ethers.getSigners();
   });
 
-  it("INV-1: ASSAToken never exceeds the 10B cap", async () => {
+  it("INV-1: lifetime issuance never exceeds the 10B cap; burns never restore headroom", async () => {
     const assa = await (await ethers.getContractFactory("ASSAToken")).deploy(admin.address);
     const CAP = await assa.CAP();
 
+    let minted = 0n; // cumulative-issuance tracker (must mirror totalMinted)
     let supply = 0n;
     for (let i = 0; i < 40; i++) {
-      // mint a random amount that stays under cap
-      const headroom = CAP - supply;
+      // mint a random amount that stays under the LIFETIME cap
+      const headroom = CAP - minted;
       if (headroom === 0n) break;
       const amt = randTokens(1, 100_000_000); // up to 100M per mint
       const mintAmt = amt < headroom ? amt : headroom;
       await assa.mint(alice.address, mintAmt);
+      minted += mintAmt;
       supply += mintAmt;
+
+      // interleave burns ~1/3 of the time: circulating supply drops, headroom must NOT grow
+      if (rnd() < 0.33 && supply > 1n) {
+        const burnAmt = (supply * BigInt(randInt(1, 50))) / 100n;
+        if (burnAmt > 0n) {
+          await assa.connect(alice).burn(burnAmt);
+          supply -= burnAmt;
+        }
+      }
+
+      expect(await assa.totalMinted()).to.equal(minted);
       expect(await assa.totalSupply()).to.equal(supply);
-      expect(await assa.totalSupply()).to.be.lte(CAP);
+      expect(minted).to.be.lte(CAP);
     }
 
-    // exceeding cap by 1 must revert
-    const left = CAP - (await assa.totalSupply());
-    await assa.mint(alice.address, left); // fill to cap
+    // fill LIFETIME issuance to cap; +1 must revert even though burns freed
+    // circulating supply — burned tokens are gone forever
+    const left = CAP - (await assa.totalMinted());
+    if (left > 0n) await assa.mint(alice.address, left);
+    expect(await assa.totalMinted()).to.equal(CAP);
     await expect(assa.mint(alice.address, 1n)).to.be.revertedWith("ASSAToken: cap exceeded");
   });
 

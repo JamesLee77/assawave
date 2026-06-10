@@ -50,13 +50,11 @@ describe("ASSA WAVE Smart Contracts Suite", () => {
       admin.address
     );
 
-    // Setup roles
+    // Setup roles (BMEBurner needs no token role — it self-burns via public burn())
     const MINTER_ROLE = await assa.MINTER_ROLE();
-    const BURNER_ROLE = await assa.BURNER_ROLE();
     const REVENUE_PROCESSOR_ROLE = await burner.REVENUE_PROCESSOR_ROLE();
 
     await assa.grantRole(MINTER_ROLE, admin.address);
-    await assa.grantRole(BURNER_ROLE, await burner.getAddress());
     await burner.grantRole(REVENUE_PROCESSOR_ROLE, processor.address);
 
     // Fund accounts
@@ -77,8 +75,8 @@ describe("ASSA WAVE Smart Contracts Suite", () => {
 
     it("respects standard minter cap", async () => {
       const CAP = await assa.CAP();
-      const currentSupply = await assa.totalSupply();
-      const amountToCap = CAP - currentSupply;
+      // headroom is governed by LIFETIME issuance (totalMinted), not circulating supply
+      const amountToCap = CAP - (await assa.totalMinted());
 
       await assa.mint(alice.address, amountToCap);
       expect(await assa.totalSupply()).to.equal(CAP);
