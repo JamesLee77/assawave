@@ -10,6 +10,9 @@
  *
  * MINTER_ROLE is intentionally handed to the Timelock (not renounced) so post-handoff
  * replenishment is possible via the 48h timelock runbook (DEVELOPMENT_PLAN §5).
+ *
+ * v2 tokens only (no BURNER_ROLE). For the legacy mainnet token use the
+ * legacy-aware handoff-plan-mainnet.ts instead.
  */
 import { ethers } from "hardhat";
 import { loadRegistry, banner } from "./lib";
@@ -29,7 +32,7 @@ async function main() {
 
   // role-id, grant-to-timelock, renounce-from-deployer per contract
   const plan: Array<{ name: string; roles: string[]; keepMinter?: boolean }> = [
-    { name: "ASSAToken", roles: ["DEFAULT_ADMIN_ROLE", "MINTER_ROLE", "BURNER_ROLE"], keepMinter: true },
+    { name: "ASSAToken", roles: ["DEFAULT_ADMIN_ROLE", "MINTER_ROLE"], keepMinter: true },
     { name: "KYCRegistry", roles: ["DEFAULT_ADMIN_ROLE", "KYC_OPERATOR_ROLE"] },
     { name: "Treasury", roles: ["DEFAULT_ADMIN_ROLE", "TREASURY_ROLE"] },
     { name: "TokenVesting", roles: ["DEFAULT_ADMIN_ROLE", "VESTING_ADMIN_ROLE"] },

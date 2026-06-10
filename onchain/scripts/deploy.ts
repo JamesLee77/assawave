@@ -9,10 +9,8 @@
  *   5. TokenVesting
  *   6. TokenSale           (USDC recipient = Treasury)
  *   7. StakingLock (veASSA)
- *   8. BMEBurner           (grant BURNER_ROLE on the token)
+ *   8. BMEBurner           (no token role needed — it self-burns via public burn())
  *
- * Role wiring done here:
- *   - ASSAToken.BURNER_ROLE  → BMEBurner
  * Handoff (grant admin → Timelock/Safe, then renounce EOA) is a SEPARATE, gated step
  * performed AFTER the funding gate (mint + configure rounds/schedules). See DEPLOYMENT.md.
  *
@@ -62,6 +60,19 @@ async function main() {
 
   // ---- 4. ASSATimelock ----
   const signers = cfg.safeSigners && cfg.safeSigners.length > 0 ? cfg.safeSigners : [deployer.address];
+  // On mainnet the timelock's proposer/executor MUST be the Safe contract itself.
+  // Wiring the Safe's owner EOAs here would let any single key schedule AND execute,
+  // collapsing the 2-of-3 multisig into 1-of-3. Checked against the LIVE chain id
+  // so network aliases without a configured chainId can't slip past the guard.
+  if ((await ethers.provider.getNetwork()).chainId === 8453n) {
+    for (const s of signers) {
+      if ((await ethers.provider.getCode(s)) === "0x") {
+        throw new Error(
+          `Timelock proposer/executor ${s} has no code on mainnet — pass the Safe contract address (SAFE_SIGNERS), never owner EOAs.`
+        );
+      }
+    }
+  }
   const timelock = await (await ethers.getContractFactory("ASSATimelock")).deploy(
     cfg.timelockMinDelay,
     signers, // proposers
@@ -118,11 +129,8 @@ async function main() {
     );
     await bme.waitForDeployment();
     put("BMEBurner", await bme.getAddress());
-
-    // Role wiring: let the burner burn $ASSA.
-    const BURNER_ROLE = await assa.BURNER_ROLE();
-    await (await assa.grantRole(BURNER_ROLE, await bme.getAddress())).wait();
-    console.log("  ↳ granted BURNER_ROLE → BMEBurner");
+    // No token role wiring: BMEBurner burns its own swapped balance via the
+    // public ERC20Burnable.burn() path.
   }
 
   await saveRegistry(reg);

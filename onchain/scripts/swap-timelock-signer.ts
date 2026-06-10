@@ -46,6 +46,18 @@ async function main() {
 
   // Target Safe: SAFE_ADDRESS env > registry "Safe" (real deployed multisig) > generated EOA stand-in.
   const realSafe = process.env.SAFE_ADDRESS ?? c.Safe;
+
+  // Mainnet guard (mirrors deploy.ts): timelock roles must go to the Safe
+  // CONTRACT — an EOA proposer/executor collapses the 2-of-3 into 1-of-N,
+  // and the mock stand-in is a rehearsal-only tool.
+  const liveChainId = (await ethers.provider.getNetwork()).chainId;
+  if (liveChainId === 8453n) {
+    if (!realSafe) throw new Error("Mainnet: SAFE_ADDRESS (or registry Safe) required — mock EOA stand-in is forbidden on chainId 8453.");
+    if ((await ethers.provider.getCode(realSafe)) === "0x") {
+      throw new Error(`Mainnet: Safe ${realSafe} has no code — pass the Safe contract address, never owner EOAs.`);
+    }
+  }
+
   const mock = realSafe ? undefined : getMockSafe(ethers.provider);
   const safeAddr = realSafe ?? mock!.address;
   console.log(`  deployer: ${deployer.address}\n  timelock: ${c.ASSATimelock}\n  Safe:     ${safeAddr}${mock ? " (mock stand-in)" : " (real multisig)"}`);

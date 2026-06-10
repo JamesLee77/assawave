@@ -35,11 +35,13 @@
     "node": "hardhat node",
     "clean": "hardhat clean",
     "gov:demo:sepolia": "hardhat run scripts/gov-demo-sepolia.ts --network baseSepolia",
-    "execute:old:sepolia": "hardhat run scripts/execute-old-op.ts --network baseSepolia"
+    "execute:old:sepolia": "hardhat run scripts/execute-old-op.ts --network baseSepolia",
+    "preflight:mainnet": "hardhat run scripts/preflight-mainnet.ts --network base",
+    "check:token:mainnet": "hardhat run scripts/check-mainnet-token.ts --network base"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "@openzeppelin/contracts": "^5.0.2",
+    "@openzeppelin/contracts": "^5.1.0",
     "@types/node": "^20.11.0",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.0",

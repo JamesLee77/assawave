@@ -24,12 +24,8 @@ async function main() {
   const addr = await bme.getAddress();
   console.log(`  BMEBurner: ${addr}`);
   await recordContract("BMEBurner", addr);
-
-  // Grant BURNER_ROLE so the burner can destroy purchased $ASSA.
-  const assa = await ethers.getContractAt("ASSAToken", token);
-  const BURNER_ROLE = await assa.BURNER_ROLE();
-  await (await assa.grantRole(BURNER_ROLE, addr)).wait();
-  console.log("  ↳ granted BURNER_ROLE → BMEBurner");
+  // No token role needed: BMEBurner burns its own swapped balance via the
+  // public ERC20Burnable.burn() path.
 }
 
 main().catch((e) => {

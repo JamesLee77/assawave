@@ -29,7 +29,7 @@ export function getNetConfig(): NetConfig {
     return {
       usdc: env.USDC_ADDRESS || CANONICAL_BASE_USDC,
       dexRouter: env.BASE_DEX_ROUTER, // Aerodrome/Uniswap router — required for BME on mainnet
-      safeSigners: env.SAFE_SIGNERS ? env.SAFE_SIGNERS.split(",") : undefined,
+      safeSigners: env.SAFE_SIGNERS ? env.SAFE_SIGNERS.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
       timelockMinDelay: Number(env.TIMELOCK_MIN_DELAY || 48 * 3600),
     };
   }
@@ -37,7 +37,7 @@ export function getNetConfig(): NetConfig {
     return {
       usdc: env.USDC_ADDRESS, // sandbox USDC if set; else a mock is deployed
       dexRouter: env.BASE_DEX_ROUTER,
-      safeSigners: env.SAFE_SIGNERS ? env.SAFE_SIGNERS.split(",") : undefined,
+      safeSigners: env.SAFE_SIGNERS ? env.SAFE_SIGNERS.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
       timelockMinDelay: Number(env.TIMELOCK_MIN_DELAY || 48 * 3600),
     };
   }
