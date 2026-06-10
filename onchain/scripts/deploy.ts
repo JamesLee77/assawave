@@ -32,10 +32,17 @@ async function main() {
     console.log(`  ${k.padEnd(14)} ${v}`);
   };
 
+  // Explicit nonce sequencing: some public RPCs (e.g. the Base Sepolia gateway)
+  // lag `getTransactionCount("pending")` between rapid sequential deploys, so
+  // hardhat-ethers reuses a stale nonce and the next deploy reverts
+  // "nonce too low". Thread the nonce ourselves from the confirmed count.
+  let nextNonce = await ethers.provider.getTransactionCount(deployer.address, "latest");
+  const N = () => ({ nonce: nextNonce++ });
+
   // ---- USDC (mock on local) ----
   let usdc = cfg.usdc;
   if (!usdc) {
-    const mock = await (await ethers.getContractFactory("MockUSDC")).deploy();
+    const mock = await (await ethers.getContractFactory("MockUSDC")).deploy(N());
     await mock.waitForDeployment();
     usdc = await mock.getAddress();
     put("MockUSDC", usdc);
@@ -44,17 +51,17 @@ async function main() {
   }
 
   // ---- 1. ASSAToken ----
-  const assa = await (await ethers.getContractFactory("ASSAToken")).deploy(deployer.address);
+  const assa = await (await ethers.getContractFactory("ASSAToken")).deploy(deployer.address, N());
   await assa.waitForDeployment();
   put("ASSAToken", await assa.getAddress());
 
   // ---- 2. KYCRegistry ----
-  const kyc = await (await ethers.getContractFactory("KYCRegistry")).deploy(deployer.address);
+  const kyc = await (await ethers.getContractFactory("KYCRegistry")).deploy(deployer.address, N());
   await kyc.waitForDeployment();
   put("KYCRegistry", await kyc.getAddress());
 
   // ---- 3. Treasury ----
-  const treasury = await (await ethers.getContractFactory("Treasury")).deploy(deployer.address);
+  const treasury = await (await ethers.getContractFactory("Treasury")).deploy(deployer.address, N());
   await treasury.waitForDeployment();
   put("Treasury", await treasury.getAddress());
 
@@ -77,7 +84,8 @@ async function main() {
     cfg.timelockMinDelay,
     signers, // proposers
     signers, // executors
-    deployer.address // optional admin (renounced during handoff)
+    deployer.address, // optional admin (renounced during handoff)
+    N()
   );
   await timelock.waitForDeployment();
   put("ASSATimelock", await timelock.getAddress());
@@ -85,7 +93,8 @@ async function main() {
   // ---- 5. TokenVesting ----
   const vesting = await (await ethers.getContractFactory("TokenVesting")).deploy(
     await assa.getAddress(),
-    deployer.address
+    deployer.address,
+    N()
   );
   await vesting.waitForDeployment();
   put("TokenVesting", await vesting.getAddress());
@@ -95,7 +104,8 @@ async function main() {
     await assa.getAddress(),
     usdc,
     await treasury.getAddress(),
-    deployer.address
+    deployer.address,
+    N()
   );
   await sale.waitForDeployment();
   put("TokenSale", await sale.getAddress());
@@ -103,7 +113,8 @@ async function main() {
   // ---- 7. StakingLock (veASSA) ----
   const staking = await (await ethers.getContractFactory("StakingLock")).deploy(
     await assa.getAddress(),
-    deployer.address
+    deployer.address,
+    N()
   );
   await staking.waitForDeployment();
   put("StakingLock", await staking.getAddress());
@@ -114,7 +125,7 @@ async function main() {
     if (network.name === "base" || network.name === "baseSepolia") {
       console.log("  ⚠ BME skipped: set BASE_DEX_ROUTER to deploy BMEBurner on a live chain.");
     } else {
-      const mockRouter = await (await ethers.getContractFactory("MockDexRouter")).deploy();
+      const mockRouter = await (await ethers.getContractFactory("MockDexRouter")).deploy(N());
       await mockRouter.waitForDeployment();
       dexRouter = await mockRouter.getAddress();
       put("MockDexRouter", dexRouter);
@@ -125,7 +136,8 @@ async function main() {
       await assa.getAddress(),
       usdc,
       dexRouter,
-      deployer.address
+      deployer.address,
+      N()
     );
     await bme.waitForDeployment();
     put("BMEBurner", await bme.getAddress());
