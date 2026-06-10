@@ -7,7 +7,7 @@ Target chains: **Base Sepolia** (`84532`) → audit → **Base mainnet** (`8453`
 
 | Contract | Purpose |
 |---|---|
-| `ASSAToken` | ERC-20 (Permit + Votes + Burnable), 10B hard cap, role-gated mint/burn |
+| `ASSAToken` | ERC-20 (Permit + Votes + Burnable), 10B LIFETIME hard cap (`totalMinted`), role-gated mint; burn is the public allowance-gated ERC20Burnable path |
 | `KYCRegistry` | On-chain `isKYCed` allowlist (off-chain OFAC/nationality pre-filter) |
 | `Treasury` | USDC receiver + $ASSA bucket vault, withdrawals gated by `TREASURY_ROLE` |
 | `ASSATimelock` | OZ TimelockController, 48h floor (relaxed on local chains) |
@@ -43,7 +43,7 @@ BASESCAN_API_KEY=...           # Etherscan v2 unified key
 # optional overrides (else sensible defaults / mocks):
 USDC_ADDRESS=0x...             # canonical Base USDC on mainnet by default
 BASE_DEX_ROUTER=0x...          # Aerodrome/Uniswap router — REQUIRED for BME on live chains
-SAFE_SIGNERS=0xabc,0xdef       # timelock proposers/executors (Safe owners)
+SAFE_SIGNERS=0xSafeContract    # timelock proposer/executor = the Safe CONTRACT address (single entry — NEVER owner EOAs; deploy.ts hard-fails on mainnet otherwise)
 TIMELOCK_MIN_DELAY=172800      # 48h
 ```
 
@@ -51,7 +51,7 @@ TIMELOCK_MIN_DELAY=172800      # 48h
 
 ```bash
 npm run compile
-npm test          # 52 passing
+npm test          # 77 passing
 npm run coverage  # core modules 91–100% stmts
 ```
 
@@ -122,4 +122,4 @@ npm run verify:mainnet <address> [constructor args...]
 - **External Audit #1** (Token · Sale · Vesting · KYC) — 0 critical/high before the sale.
 - **External Audit #2** (veASSA · BMEBurner) — 0 critical/high before staking/BME mainnet.
 - **Legal GO** (VAUPA / securities) before `configureRound` / `withdraw` on mainnet.
-- Safe 4-of-7 + 48h Timelock handoff rehearsed on Sepolia; EOA renounced.
+- Safe 2-of-3 + 48h Timelock handoff rehearsed on Sepolia; EOA renounced.

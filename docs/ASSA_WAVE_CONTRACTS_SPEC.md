@@ -74,7 +74,7 @@ All permissions are granted via `AccessControl` roles, and the ultimate admin is
 |---|---|---|
 | `DEFAULT_ADMIN_ROLE` | Timelock (Safe) | Grant/revoke roles, approve upgrades |
 | `MINTER_ROLE` | `MiningRewards` only | $ASSA mint (within cap) |
-| `BURNER_ROLE` | `BMEBurner`, `ConsumptionEngine` | $ASSA burn |
+| ~~`BURNER_ROLE`~~ | **REMOVED (2026-06 v2 patch)** | burn is the public allowance-gated ERC20Burnable path; BMEBurner/ConsumptionEngine self-burn their own balance via `burn()` — no confiscation role exists |
 | `SALE_ADMIN_ROLE` | Operator Safe | Configure rounds, whitelist root |
 | `TREASURY_ROLE` | Treasury Safe | Withdraw allocated tokens (via Vesting) |
 | `ORACLE_ROLE` | Chainlink/Node Attesters | Price, score, and uptime feeds |
@@ -115,7 +115,7 @@ contract ASSAToken is ERC20, ERC20Permit, ERC20Votes, ERC20Burnable, AccessContr
         require(totalSupply() + amount <= CAP, "CAP");
         _mint(to, amount);
     }
-    // burn / burnFrom inherited (called by BURNER_ROLE contracts)
+    // burn / burnFrom inherited from ERC20Burnable (allowance-gated; no role)
     // ERC20Votes overrides (_update, nonces) per OZ v5
 }
 ```
