@@ -12,7 +12,7 @@ Target chains: **Base Sepolia** (`84532`) → audit → **Base mainnet** (`8453`
 | `Treasury` | USDC receiver + $ASSA bucket vault, withdrawals gated by `TREASURY_ROLE` |
 | `ASSATimelock` | OZ TimelockController, 48h floor (relaxed on local chains) |
 | `TokenVesting` | Categorized TGE + cliff + linear schedules (Founder/Team/Investor/…) |
-| `TokenSale` | 3-round fixed-price USDC sale, self-vesting allocations, Pausable |
+| `TokenSale` | 3-round fixed-price USDC sale, self-vesting allocations (weighted-average top-up anchor), solvency-gated purchases, optional per-buyer cap, Pausable |
 | `StakingLock` | veASSA — zero-yield lock, linear decay, checkpoint history |
 | `BMEBurner` | USDC → $ASSA swap + permanent burn (needs a seeded DEX pool) |
 
@@ -87,8 +87,13 @@ While the deployer still holds `MINTER_ROLE`:
    - `ASSAToken.mint(TokenSale, Σ round hard caps)`
    - `ASSAToken.mint(TokenVesting, Σ schedule totals)`
    - any veASSA/treasury seed amounts.
-2. **Configure sale rounds** — `TokenSale.configureRound(...)` (price frozen once a round sells),
-   then `TokenSale.setWhitelist(roundId, [...], true)`.
+2. **Configure sale rounds** — launch discipline: `configureRound(..., active=false)` →
+   verify price/caps/schedule on-chain (`getRound`) → optionally `setMaxPerBuyer(roundId, cap)` →
+   `setWhitelist(roundId, [...], true)` → `setRoundActive(roundId, true)` LAST.
+   A LIVE round is price-frozen once it sells; to correct a misconfigured sold round,
+   `setRoundActive(roundId, false)` first (existing buyers keep their frozen terms;
+   the cap can never drop below soldTokens). `purchase` requires the contract to be
+   funded for ALL outstanding obligations — fund before activating.
 3. **Create vesting schedules** — `TokenVesting.createSchedule(...)` per category
    (Founder 0%/12m/48m · Team 0%/12m/36m · Investor · Partner · ECO).
 4. **Treasury buckets** — `Treasury.setBucketAllocation(bucket, cap)` for the distribution split.
