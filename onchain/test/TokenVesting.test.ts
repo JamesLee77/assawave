@@ -134,6 +134,66 @@ describe("TokenVesting — TGE + cliff + linear accounting (Spec §3.3)", () => 
     expect(await assa.balanceOf(alice.address)).to.equal(sched.total);
   });
 
+  it("revoke freezes vested value exactly: no re-vesting curve is applied to the frozen total", async () => {
+    // 50% TGE + 6m cliff: vested is exactly the 500k TGE for the whole cliff window
+    const total = ethers.parseUnits("1000000", 18);
+    await vesting.createSchedule(alice.address, total, 5000, 6 * MONTH, 6 * MONTH, true, 1);
+
+    await time.increase(3 * MONTH); // inside the cliff
+    await vesting.revoke(0); // freeze at the 500k TGE
+
+    // pre-fix the curve re-applied to the frozen total returned 250k here
+    expect(await vesting.releasable(0)).to.equal(total / 2n);
+    await vesting.connect(alice).release(0);
+    expect(await assa.balanceOf(alice.address)).to.equal(total / 2n);
+  });
+
+  it("release/releasable never revert after a claim-then-revoke (frozen schedules stop re-vesting)", async () => {
+    const total = ethers.parseUnits("1000000", 18);
+    await vesting.createSchedule(alice.address, total, 5000, 6 * MONTH, 6 * MONTH, true, 1);
+
+    await vesting.connect(alice).release(0); // claim the 500k TGE immediately
+    expect(await assa.balanceOf(alice.address)).to.equal(total / 2n);
+
+    await time.increase(3 * MONTH); // still inside the cliff: vestedNow == claimed
+    await vesting.revoke(0); // freeze at 500k (== claimed)
+
+    // pre-fix: vested re-curved to 250k < claimed 500k → both calls underflow-reverted
+    expect(await vesting.releasable(0)).to.equal(0n);
+    await expect(vesting.connect(alice).release(0)).to.be.revertedWith("Vesting: nothing releasable");
+
+    // far future: nothing ever re-vests beyond the frozen total
+    await time.increase(24 * MONTH);
+    expect(await vesting.releasable(0)).to.equal(0n);
+    expect(await vesting.vestedOf(0)).to.equal(total / 2n);
+  });
+
+  it("revoke guards: non-revocable and double-revoke are rejected", async () => {
+    const total = ethers.parseUnits("100", 18);
+    await vesting.createSchedule(alice.address, total, 0, 0, 10 * MONTH, false, 1);
+    await expect(vesting.revoke(0)).to.be.revertedWith("Vesting: not revocable");
+
+    await vesting.createSchedule(alice.address, total, 0, 0, 10 * MONTH, true, 1);
+    await vesting.revoke(1);
+    await expect(vesting.revoke(1)).to.be.revertedWith("Vesting: already revoked");
+  });
+
+  it("releaseAll handles a mix of live and revoked schedules", async () => {
+    const total = ethers.parseUnits("1000000", 18);
+    await vesting.createSchedule(alice.address, total, 0, 0, 10 * MONTH, true, 1); // revoked at ~50%
+    await vesting.createSchedule(alice.address, total, 0, 0, 10 * MONTH, false, 2); // stays live
+    const start = Number((await vesting.getSchedule(0)).start);
+
+    await time.increaseTo(start + 5 * MONTH);
+    await vesting.revoke(0); // freeze schedule 0 near 50%
+
+    await time.increaseTo(start + 10 * MONTH); // schedule 1 fully vested
+    await vesting.connect(alice).releaseAll();
+
+    const frozen = (await vesting.getSchedule(0)).total;
+    expect(await assa.balanceOf(alice.address)).to.equal(BigInt(frozen) + total);
+  });
+
   it("recoverERC20 cannot claw back tokens owed to beneficiaries", async () => {
     const total = ethers.parseUnits("80000000", 18); // 80M owed of 100M funded
     await vesting.createSchedule(alice.address, total, 0, 0, 12 * MONTH, false, 2);

@@ -21,7 +21,17 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
  *      - #4 Model: self-contained, id-indexed allocations (not pushed into TokenVesting).
  *      - #17 Pausable: `purchase` is `whenNotPaused`; `claim` is exempt so buyers can
  *        always withdraw vested tokens even during an emergency pause.
- *      - Price freeze: a round cannot be reconfigured once it has sold any tokens.
+ *      - Price freeze: a LIVE round cannot be reconfigured once it has sold any
+ *        tokens. A deactivated round CAN be corrected (cap never below sold) —
+ *        otherwise any whitelisted buyer could lock in a misconfigured price
+ *        forever by making soldTokens > 0. Buyers are unaffected: their schedule
+ *        terms are frozen into their Allocation at purchase time.
+ *      - Vesting clock: top-ups re-anchor `startTime` to the amount-weighted
+ *        average, so a later purchase never inherits the first purchase's
+ *        elapsed vesting time.
+ *      - Solvency: `purchase` requires the contract to hold enough $ASSA to cover
+ *        ALL outstanding obligations plus the new one — USDC is non-refundable
+ *        (it flows straight to the Treasury), so unbacked sales must never happen.
  *      USDC flows directly to the Treasury (non-custodial — the sale never holds USDC).
  *      The sale must be pre-funded with $ASSA covering its round hard caps.
  */
@@ -64,10 +74,15 @@ contract TokenSale is AccessControl, ReentrancyGuard, Pausable {
     mapping(uint256 => mapping(address => Allocation)) public allocations;
     mapping(uint256 => mapping(address => bool)) public whitelist;
 
+    /// @notice Optional per-buyer cumulative purchase cap per round (0 = unlimited).
+    mapping(uint256 => uint256) public maxPerBuyer;
+
     /// @notice Sum of (totalAllocated - claimed) still owed to buyers in $ASSA.
     uint256 public totalOutstanding;
 
     event RoundConfigured(uint256 indexed roundId, string name, uint256 priceUsdc, uint128 hardCapTokens, uint16 tgeBps);
+    event RoundActiveSet(uint256 indexed roundId, bool active);
+    event MaxPerBuyerSet(uint256 indexed roundId, uint256 maxTokens);
     event WhitelistSet(uint256 indexed roundId, address indexed account, bool allowed);
     event Purchased(uint256 indexed roundId, address indexed buyer, uint256 assaAmount, uint256 usdcPaid);
     event Claimed(uint256 indexed roundId, address indexed buyer, uint256 assaAmount);
@@ -94,9 +109,12 @@ contract TokenSale is AccessControl, ReentrancyGuard, Pausable {
     // ------------------------------------------------------------------
 
     /**
-     * @notice Create (roundId == count) or update (price-frozen) a round.
-     * @dev An existing round can only be updated while it has sold nothing
-     *      (`soldTokens == 0`), enforcing the price freeze.
+     * @notice Create (roundId == count) or update a round.
+     * @dev A round that has sold tokens can only be updated while DEACTIVATED
+     *      (live price freeze), and its cap can never drop below soldTokens.
+     *      Existing buyers keep the terms frozen into their Allocation; their
+     *      later top-ups pay the live price but keep vesting on those original
+     *      frozen terms (only the first purchase reads the round's schedule).
      */
     function configureRound(
         uint256 roundId,
@@ -134,7 +152,8 @@ contract TokenSale is AccessControl, ReentrancyGuard, Pausable {
             );
         } else {
             Round storage r = _rounds[roundId];
-            require(r.soldTokens == 0, "Sale: round frozen (sold>0)");
+            require(r.soldTokens == 0 || !r.active, "Sale: deactivate to reconfigure");
+            require(hardCapTokens >= r.soldTokens, "Sale: cap below sold");
             r.name = name;
             r.priceUsdc = priceUsdc;
             r.hardCapTokens = hardCapTokens;
@@ -151,7 +170,16 @@ contract TokenSale is AccessControl, ReentrancyGuard, Pausable {
 
     /// @notice Toggle a round's active flag without touching frozen price/cap.
     function setRoundActive(uint256 roundId, bool active) external onlyRole(SALE_ADMIN_ROLE) {
+        require(roundId < _rounds.length, "Sale: bad roundId");
         _rounds[roundId].active = active;
+        emit RoundActiveSet(roundId, active);
+    }
+
+    /// @notice Set the per-buyer cumulative cap for a round (0 = unlimited).
+    function setMaxPerBuyer(uint256 roundId, uint256 maxTokens) external onlyRole(SALE_ADMIN_ROLE) {
+        require(roundId < _rounds.length, "Sale: bad roundId");
+        maxPerBuyer[roundId] = maxTokens;
+        emit MaxPerBuyerSet(roundId, maxTokens);
     }
 
     function setWhitelist(uint256 roundId, address[] calldata accounts, bool allowed)
@@ -202,18 +230,42 @@ contract TokenSale is AccessControl, ReentrancyGuard, Pausable {
         require(whitelist[roundId][msg.sender], "Sale: not whitelisted");
         require(r.soldTokens + assaAmount <= r.hardCapTokens, "Sale: exceeds round cap");
 
+        Allocation storage a = allocations[roundId][msg.sender];
+
+        uint256 buyerCap = maxPerBuyer[roundId];
+        if (buyerCap != 0) {
+            require(uint256(a.totalAllocated) + assaAmount <= buyerCap, "Sale: exceeds buyer cap");
+        }
+
+        // Never sell unbacked tokens: USDC is non-refundable (it goes straight to
+        // the Treasury), so every new obligation must already be covered by the
+        // contract's $ASSA inventory.
+        require(
+            assaToken.balanceOf(address(this)) >= totalOutstanding + assaAmount,
+            "Sale: insufficient inventory"
+        );
+
         uint256 usdcCost = (assaAmount * r.priceUsdc) / ASSA_UNIT;
         require(usdcCost > 0, "Sale: dust amount");
 
         r.soldTokens += uint128(assaAmount);
 
-        Allocation storage a = allocations[roundId][msg.sender];
         if (a.totalAllocated == 0) {
             // Freeze schedule params at first purchase in this round.
             a.startTime = uint64(block.timestamp);
             a.cliffSeconds = r.cliffSeconds;
             a.vestSeconds = r.vestSeconds;
             a.tgeBps = r.tgeBps;
+        } else {
+            // Weighted-average re-anchor on top-ups: preserves the prior tokens'
+            // aggregate value-time but denies the new tranche the first purchase's
+            // elapsed vesting time (dust-early / buy-late cliff bypass). With a
+            // cliff the merged curve can momentarily lag what was already claimed —
+            // claim()/claimable() floor at zero until it catches up.
+            uint256 prev = a.totalAllocated;
+            a.startTime = uint64(
+                (uint256(a.startTime) * prev + block.timestamp * assaAmount) / (prev + assaAmount)
+            );
         }
         a.totalAllocated += uint128(assaAmount);
         totalOutstanding += assaAmount;
@@ -228,7 +280,10 @@ contract TokenSale is AccessControl, ReentrancyGuard, Pausable {
         Allocation storage a = allocations[roundId][msg.sender];
         require(a.totalAllocated > 0, "Sale: no allocation");
 
-        uint256 amount = _vested(a, block.timestamp) - a.claimed;
+        // Floor at zero: after a top-up re-anchor the merged curve can briefly
+        // lag the already-claimed amount (the buyer is "ahead"); never underflow.
+        uint256 vestedNow = _vested(a, block.timestamp);
+        uint256 amount = vestedNow > a.claimed ? vestedNow - a.claimed : 0;
         require(amount > 0, "Sale: nothing claimable");
 
         a.claimed += uint128(amount);
@@ -245,7 +300,8 @@ contract TokenSale is AccessControl, ReentrancyGuard, Pausable {
     function claimable(uint256 roundId, address user) external view returns (uint256) {
         Allocation storage a = allocations[roundId][user];
         if (a.totalAllocated == 0) return 0;
-        return _vested(a, block.timestamp) - a.claimed;
+        uint256 vestedNow = _vested(a, block.timestamp);
+        return vestedNow > a.claimed ? vestedNow - a.claimed : 0;
     }
 
     function getRound(uint256 roundId) external view returns (Round memory) {

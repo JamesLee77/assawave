@@ -273,6 +273,13 @@ contract TokenVesting is AccessControl, ReentrancyGuard {
     // ------------------------------------------------------------------
 
     function _vestedAmount(Schedule memory s, uint256 ts) internal pure returns (uint256) {
+        // A revoked schedule is frozen: `revoke()` already cut `total` down to the
+        // amount vested at revocation, so the whole remaining total IS the vested
+        // amount. Re-applying the curve to the reduced total would shrink vested
+        // below `claimed` and underflow every release/releasable until the original
+        // timeline caught up.
+        if (s.revoked) return s.total;
+
         if (ts < s.start) return 0;
 
         uint256 total = s.total;
