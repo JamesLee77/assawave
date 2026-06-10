@@ -23,17 +23,33 @@ handoff still NOT executed (deployer holds ADMIN+MINTER+BURNER, Safe holds none)
 Migration is still simple while the distributor is the **only** holder — do it BEFORE
 the server distributes anything to users.
 
-**NEW RECOMMENDED ORDER (single-holder migration):**
+## 0. v2 TOKEN DEPLOY — READY TO FIRE (prepared 2026-06-10)
+
+Pre-flight verified read-only (`npm run preflight:mainnet`) — every gate green EXCEPT the key:
+- chainId 8453 ✓ · intended deployer `0x7C5a…` balance **0.0504 ETH** ✓ (floor 0.002) · legacy preserved as `ASSATokenLegacy` in base.json ✓
+- compiled artifact = **v2** (has `totalMinted`, NO `BURNER_ROLE`, standard allowance `burnFrom`) ✓
+- **ONE blocker: `MAINNET_PRIVATE_KEY` is empty in `assawave/.env`.** Restore the `0x7C5a…` key (the value is backed up off-machine), then the deploy is a clean 4-command run.
+
+**Exact fire sequence (run from `assawave/onchain`):**
+```bash
+# 0. (one-time) restore the deployer key in assawave/.env:  MAINNET_PRIVATE_KEY=0x…
+npm run preflight:mainnet          # must print "✓ Pre-flight passed"
+npm run deploy:token:mainnet       # deploys v2 ASSAToken, writes base.json "ASSAToken" = new addr
+npm run verify:mainnet -- <newAddr> 0x7C5aCAD2c305f2B29818b614bFdD4DA9F6c15A4F   # Basescan verify (ctor arg = deployer)
+npm run check:token:mainnet        # should now read "v2 token" (totalMinted present), supply 0, deployer ADMIN+MINTER
+```
+After this, the v2 token is live (supply 0). Then: handoff v2 → Safe (§4), Safe mints 10M → distributor (§5), retire legacy (§7). Remove `MAINNET_PRIVATE_KEY` from `.env` again once done.
+
+**FULL RECOMMENDED ORDER (single-holder migration):**
 ```
 0. FREEZE legacy distribution: do not send legacy ASSA to anyone from 0xdBDe…
-1. Redeploy v2 token:   cd onchain && npm run preflight:mainnet
-                        npm run deploy:token:mainnet      (updates deployments/base.json)
-                        verify on Basescan; update portal/site addresses
-2-5. Handoff v2 → Safe  (section 4 below — 4 calls, no BURNER step)
-6. Safe mints 10,000,000 v2-ASSA → distributor 0xdBDe… (section 5)
-7. Retire legacy: distributor self-burns its 10M legacy ASSA via burn()
+1. Deploy v2 token: the 4-command sequence above (preflight → deploy → verify → check)
+2. Update portal/site testnet→mainnet addresses to the new v2 token
+3-6. Handoff v2 → Safe  (section 4 below — 4 calls, no BURNER step)
+7. Safe mints 10,000,000 v2-ASSA → distributor 0xdBDe… (section 5)
+8. Retire legacy: distributor self-burns its 10M legacy ASSA via burn()
    (public ERC20Burnable — its own key suffices), or simply never moves it.
-   Mark the legacy address as deprecated in docs/portal/site.
+   Mark the legacy address (ASSATokenLegacy) as deprecated in docs/portal/site.
 ```
 Do NOT mint or distribute further on the legacy token.
 
