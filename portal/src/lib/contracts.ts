@@ -18,8 +18,10 @@ import { ADMIN_CHAIN_ID, ADMIN_EXPLORER, IS_MAINNET } from "./env";
 const ZERO = "0x0000000000000000000000000000000000000000" as Address;
 
 const CONTRACTS_MAINNET = {
-  // Fill from onchain/deployments/base.json after Audit #1/#2 + mainnet deploy:
-  assaToken: ZERO,
+  // Base mainnet (8453). v2 ASSAToken deployed 2026-06-11 (supply 0, pre-handoff);
+  // onchain/deployments/base.json. The rest of the suite is NOT on mainnet yet —
+  // fill each in as it deploys (sale/vesting/staking/kyc/treasury/timelock).
+  assaToken: "0x7B58cC6b1a746cC73986b439ffD968e9b1028d78" as Address,
   tokenSale: ZERO,
   tokenVesting: ZERO,
   stakingLock: ZERO,
